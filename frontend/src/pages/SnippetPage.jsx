@@ -55,6 +55,10 @@ export default function SnippetPage() {
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const cooldownActive = cooldownLeft > 0;
 
+  // Coding Platform Mode state
+  const [codingPlatformMode, setCodingPlatformMode] = useState(false);
+  const [problemStatement, setProblemStatement] = useState('');
+
   // Live countdown for the AI request cooldown (429 responses from the server).
   useEffect(() => {
     if (!cooldownActive) return undefined;
@@ -79,17 +83,24 @@ export default function SnippetPage() {
 
   // Derive line numbers from AI-detected errors so we can highlight them
   // directly inside the code editor, right beside the actual code.
-  const errorLines = useMemo(
-    () => extractErrorLines(analysis?.errors),
-    [analysis?.errors]
-  );
-  const hasErrors = analysis?.errors?.length > 0;
+  const errorLines = useMemo(() => {
+    // Prefer the structured errorLines array from the backend if present.
+    if (Array.isArray(analysis?.errorLines) && analysis.errorLines.length > 0) {
+      return analysis.errorLines;
+    }
+    return extractErrorLines(analysis?.errors || analysis?.analysisErrors);
+  }, [analysis?.errorLines, analysis?.errors, analysis?.analysisErrors]);
+  const hasErrors = (analysis?.errors?.length > 0) || (analysis?.analysisErrors?.length > 0);
 
   const loadSnippet = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get(`/snippets/${id}`);
       setSnippet(res.data.snippet);
+      // Pre-fill the problem statement from the snippet if it exists.
+      if (res.data.snippet?.problemStatement) {
+        setProblemStatement(res.data.snippet.problemStatement);
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load snippet');
     } finally {
@@ -177,6 +188,12 @@ export default function SnippetPage() {
     if (!currentCode.trim()) return;
     if (cooldownActive) return;
 
+    // In coding platform mode, a problem statement is required.
+    if (codingPlatformMode && !problemStatement.trim()) {
+      setError('Please paste the problem statement before running coding-platform analysis.');
+      return;
+    }
+
     try {
       setAnalysisLoading(true);
       const res = await api.post('/analysis/analyze', {
@@ -184,6 +201,8 @@ export default function SnippetPage() {
         language: snippet?.language || 'javascript',
         snippetId: id,
         versionNumber: selectedVersion || snippet?.currentVersion || 1,
+        codingPlatformMode,
+        problemStatement: codingPlatformMode ? problemStatement.trim() : '',
       });
       setAnalysis(res.data);
       setError('');
@@ -202,7 +221,7 @@ export default function SnippetPage() {
     } finally {
       setAnalysisLoading(false);
     }
-  }, [canAnalyze, currentCode, snippet?.language, snippet?.currentVersion, id, selectedVersion, cooldownActive]);
+  }, [canAnalyze, currentCode, snippet?.language, snippet?.currentVersion, id, selectedVersion, cooldownActive, codingPlatformMode, problemStatement]);
 
   const handleFork = async () => {
     if (!user) return;
@@ -271,6 +290,7 @@ export default function SnippetPage() {
       await api.put(`/snippets/${id}`, {
         code: editCode,
         commitMessage: commitMessage.trim(),
+        problemStatement,
       });
       setEditing(false);
       setCommitMessage('');
@@ -543,7 +563,7 @@ export default function SnippetPage() {
                             </h3>
                           </div>
                           <ul className="space-y-2 text-xs text-red-200">
-                            {analysis.errors.map((errorItem, index) => {
+                            {(analysis?.errors || analysis?.analysisErrors || []).map((errorItem, index) => {
                               const lineMatch = String(errorItem).match(/line\s*[:#]?\s*(\d+)/i);
                               const lineNo = lineMatch ? Number(lineMatch[1]) : null;
                               return (
@@ -563,7 +583,7 @@ export default function SnippetPage() {
                           </ul>
                           {errorLines.length === 0 && (
                             <p className="mt-2 text-[11px] text-red-400/70">
-                              Tip: include “Line N” in error notes to highlight the exact line in the editor.
+                              Tip: include "Line N" in error notes to highlight the exact line in the editor.
                             </p>
                           )}
                         </aside>
@@ -588,11 +608,74 @@ export default function SnippetPage() {
                         ? `Wait ${cooldownLeft}s`
                         : analysis
                           ? 'Try Again'
-                          : 'Explain Code'}
+                          : codingPlatformMode
+                            ? 'Get Hints'
+                            : 'Explain Code'}
                   </button>
                 </div>
+
+                {/* Coding Platform Mode toggle */}
+                <div className="mb-3 rounded-lg border border-slate-800 bg-slate-950/60 p-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-slate-300">Coding Platform Mode</p>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        Paste the problem to get hint-based DSA feedback.
+                      </p>
+                    </div>
+                    <label className="relative inline-flex h-6 w-11 items-center rounded-full transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={codingPlatformMode}
+                        onChange={(e) => {
+                          setCodingPlatformMode(e.target.checked);
+                          setAnalysis(null);
+                        }}
+                        className="sr-only"
+                      />
+                      <span
+                        className={`inline-block h-6 w-11 rounded-full transition-colors ${
+                          codingPlatformMode ? 'bg-blue-600' : 'bg-slate-700'
+                        }`}
+                      >
+                        <span
+                          className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                            codingPlatformMode ? 'translate-x-6' : 'translate-x-1'
+                          }`}
+                        />
+                      </span>
+                    </label>
+                  </div>
+
+                  {codingPlatformMode && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="mt-3"
+                    >
+                      <label htmlFor="problemStatement" className="mb-1.5 block text-xs font-medium text-slate-300">
+                        Problem Statement / Question
+                      </label>
+                      <textarea
+                        id="problemStatement"
+                        value={problemStatement}
+                        onChange={(e) => setProblemStatement(e.target.value)}
+                        rows={4}
+                        placeholder="Paste the coding problem here (e.g. from LeetCode, Codeforces, HackerRank)..."
+                        className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2.5 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                      />
+                    </motion.div>
+                  )}
+                </div>
+
                 {analysisLoading ? (
-                  <p className="text-sm text-slate-400">Analyzing your code for errors, suggestions, and complexity…</p>
+                  <p className="text-sm text-slate-400">
+                    {codingPlatformMode
+                      ? 'Analyzing your approach and preparing hints…'
+                      : 'Analyzing your code for errors, suggestions, and complexity…'}
+                  </p>
                 ) : cooldownActive ? (
                   <div className="rounded-lg border border-slate-800 bg-slate-900 p-4">
                     <p className="text-sm font-medium text-slate-300">🧠 AI Analysis</p>
@@ -617,82 +700,200 @@ export default function SnippetPage() {
                       </p>
                     )}
 
-                    {/* Category badge */}
-                    {analysis.category && (
-                      <div className="mb-3">
-                        <span className="rounded-full bg-blue-600/10 px-3 py-1 text-xs text-blue-400">
-                          {analysis.category}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Time & Space complexity — only for DSA problems */}
-                    {analysis.isDSA && (
-                      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                        <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
-                          <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Time complexity</p>
-                          <p className="mt-2 text-sm font-semibold text-white">
-                            {analysis.timeComplexity || analysis.complexity?.timeComplexity || 'N/A'}
+                    {/* ===== Coding Platform Mode Results ===== */}
+                    {codingPlatformMode && (analysis.isOptimal !== undefined && analysis.isOptimal !== null) ? (
+                      <div className="space-y-3">
+                        {/* Optimal / Not Optimal indicator */}
+                        <div
+                          className={`rounded-lg border p-3 ${
+                            analysis.isOptimal
+                              ? 'border-emerald-500/40 bg-emerald-500/10'
+                              : 'border-amber-500/40 bg-amber-500/10'
+                          }`}
+                        >
+                          <p className={`text-sm font-semibold ${analysis.isOptimal ? 'text-emerald-400' : 'text-amber-400'}`}>
+                            {analysis.isOptimal ? '✅ Your approach is optimal!' : '⚠️ Your approach can be optimized'}
                           </p>
+                          {analysis.approachExplanation && (
+                            <p className="mt-2 text-xs text-slate-300">{analysis.approachExplanation}</p>
+                          )}
                         </div>
-                        <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
-                          <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Space complexity</p>
-                          <p className="mt-2 text-sm font-semibold text-white">
-                            {analysis.spaceComplexity || analysis.complexity?.spaceComplexity || 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
 
-                    <p className="mt-3 text-sm text-slate-300">{analysis.explanation}</p>
+                        {/* Recommended Data Structures */}
+                        {analysis.recommendedDataStructures?.length > 0 && (
+                          <div className="rounded-lg border border-blue-900/50 bg-blue-950/20 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-blue-400">
+                              Recommended Data Structures
+                            </p>
+                            <ul className="mt-2 space-y-1.5 text-sm text-blue-200">
+                              {analysis.recommendedDataStructures.map((ds, index) => (
+                                <li key={`ds-${index}`} className="flex gap-2">
+                                  <span className="text-blue-400">▸</span>
+                                  <span>{ds}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
-                    {/* Suggestions / Improvements */}
-                    {analysis.suggestions?.length > 0 && (
-                      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950 p-3">
-                        <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
-                          {analysis.isDSA ? 'Improvements' : 'Suggestions'}
-                        </p>
-                        <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-300">
-                          {analysis.suggestions.map((suggestion, index) => (
-                            <li key={`${suggestion}-${index}`}>{suggestion}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                        {/* Hints */}
+                        {analysis.hints?.length > 0 && (
+                          <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
+                              Hints to improve your approach
+                            </p>
+                            <ul className="mt-2 space-y-2 text-sm text-slate-300">
+                              {analysis.hints.map((hint, index) => (
+                                <li key={`hint-${index}`} className="flex gap-2">
+                                  <span className="shrink-0 rounded bg-blue-600/20 px-1.5 py-0.5 text-[10px] font-bold text-blue-400">
+                                    Hint {index + 1}
+                                  </span>
+                                  <span>{hint}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
-                    {/* Future Requirements / Scalability */}
-                    {analysis.futureSuggestions?.length > 0 && (
-                      <div className="mt-3 rounded-lg border border-blue-900/50 bg-blue-950/20 p-3">
-                        <p className="text-[11px] uppercase tracking-[0.25em] text-blue-400">
-                          Future Requirements & Scalability
-                        </p>
-                        <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-blue-200">
-                          {analysis.futureSuggestions.map((suggestion, index) => (
-                            <li key={`future-${suggestion}-${index}`}>{suggestion}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
+                        {/* Common Mistakes */}
+                        {analysis.commonMistakes?.length > 0 && (
+                          <div className="rounded-lg border border-red-900/50 bg-red-950/20 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-red-400">
+                              Common Mistakes
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-red-200">
+                              {analysis.commonMistakes.map((mistake, index) => (
+                                <li key={`mistake-${index}`}>{mistake}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
-                    {/* Optimized / Improved Code */}
-                    {analysis.optimizedCode && (
-                      <div className="mt-3">
-                        <p className="mb-2 text-[11px] uppercase tracking-[0.25em] text-emerald-400">
-                          {analysis.isDSA ? 'Optimized Code (Lower TC/SC)' : 'Improved Code'}
-                        </p>
-                        <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
-                          <pre className="max-h-[300px] overflow-auto p-3 font-mono text-xs text-slate-200">
-                            <code>{analysis.optimizedCode}</code>
-                          </pre>
-                        </div>
+                        {/* Learning Resources */}
+                        {analysis.learningResources?.length > 0 && (
+                          <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
+                              Learning Resources
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-300">
+                              {analysis.learningResources.map((resource, index) => (
+                                <li key={`resource-${index}`}>{resource}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
                       </div>
+                    ) : (
+                      /* ===== Standard Code Review Results ===== */
+                      <>
+                        {/* Category badge */}
+                        {analysis.category && (
+                          <div className="mb-3">
+                            <span className="rounded-full bg-blue-600/10 px-3 py-1 text-xs text-blue-400">
+                              {analysis.category}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Syntax error indicator */}
+                        {analysis.hasSyntaxErrors && (
+                          <div className="mb-3 rounded-lg border border-red-900/50 bg-red-950/20 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-red-400">
+                              Syntax errors detected
+                            </p>
+                            <p className="mt-1 text-xs text-red-200">
+                              The AI found syntax errors in your code. See the highlighted lines in the editor and the error sidebar for details.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Time & Space complexity — only for DSA problems */}
+                        {analysis.isDSA && (
+                          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                              <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Time complexity</p>
+                              <p className="mt-2 text-sm font-semibold text-white">
+                                {analysis.timeComplexity || analysis.complexity?.timeComplexity || 'N/A'}
+                              </p>
+                            </div>
+                            <div className="rounded-lg border border-slate-800 bg-slate-950 p-3">
+                              <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">Space complexity</p>
+                              <p className="mt-2 text-sm font-semibold text-white">
+                                {analysis.spaceComplexity || analysis.complexity?.spaceComplexity || 'N/A'}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        <p className="mt-3 text-sm text-slate-300">{analysis.explanation}</p>
+
+                        {/* Data Structure Recommendations (DSA optimization approach) */}
+                        {analysis.dataStructureRecommendations && (
+                          <div className="mt-3 rounded-lg border border-blue-900/50 bg-blue-950/20 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-blue-400">
+                              Optimization Approach — Data Structures
+                            </p>
+                            <p className="mt-2 text-sm text-blue-200">{analysis.dataStructureRecommendations}</p>
+                          </div>
+                        )}
+
+                        {/* Suggestions / Improvements */}
+                        {analysis.suggestions?.length > 0 && (
+                          <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-slate-500">
+                              {analysis.isDSA ? 'Improvements' : 'Suggestions'}
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-slate-300">
+                              {analysis.suggestions.map((suggestion, index) => (
+                                <li key={`${suggestion}-${index}`}>{suggestion}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Future Requirements / Scalability */}
+                        {analysis.futureSuggestions?.length > 0 && (
+                          <div className="mt-3 rounded-lg border border-blue-900/50 bg-blue-950/20 p-3">
+                            <p className="text-[11px] uppercase tracking-[0.25em] text-blue-400">
+                              Future Requirements & Scalability
+                            </p>
+                            <ul className="mt-2 list-disc space-y-1 pl-4 text-sm text-blue-200">
+                              {analysis.futureSuggestions.map((suggestion, index) => (
+                                <li key={`future-${suggestion}-${index}`}>{suggestion}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {/* Optimized / Improved Code */}
+                        {analysis.optimizedCode && (
+                          <div className="mt-3">
+                            <p className="mb-2 text-[11px] uppercase tracking-[0.25em] text-emerald-400">
+                              {analysis.isDSA ? 'Optimized Code (Lower TC/SC)' : 'Improved Code'}
+                            </p>
+                            <div className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950">
+                              <pre className="max-h-[300px] overflow-auto p-3 font-mono text-xs text-slate-200">
+                                <code>{analysis.optimizedCode}</code>
+                              </pre>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </>
                 ) : (
                   <div className="rounded-lg border border-dashed border-slate-700 bg-slate-950/40 p-4 text-sm text-slate-400">
                     <p className="font-medium text-slate-300">🧠 AI Analysis</p>
-                    <p className="mt-2">No analysis has been generated for this version yet.</p>
-                    <p className="mt-1 text-xs text-slate-500">Click “Explain Code” to generate one.</p>
+                    <p className="mt-2">
+                      {codingPlatformMode
+                        ? 'Paste the problem statement and click "Get Hints" to receive hint-based feedback on your approach.'
+                        : 'No analysis has been generated for this version yet.'}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {codingPlatformMode
+                        ? 'The AI will check if your approach is optimal and suggest data structures to consider.'
+                        : 'Click "Explain Code" to generate one.'}
+                    </p>
                   </div>
                 )}
               </div>

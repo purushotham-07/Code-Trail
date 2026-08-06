@@ -60,6 +60,12 @@ const snippetSchema = new mongoose.Schema(
         default: "",
       },
     },
+
+    // Coding platform problem statement (optional)
+    problemStatement: {
+      type: String,
+      default: "",
+    },
   },
   {
     timestamps: true,
@@ -67,9 +73,9 @@ const snippetSchema = new mongoose.Schema(
 );
 
 /*
-|--------------------------------------------------------------------------
-| INDEXES
-|--------------------------------------------------------------------------
+||--------------------------------------------------------------------------
+|| INDEXES
+||--------------------------------------------------------------------------
 */
 
 // Text search only on title and tags

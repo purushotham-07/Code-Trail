@@ -16,6 +16,7 @@ CodeTrail is a production-ready, version-controlled code snippet sharing platfor
 - **User Profile** — Avatar, name, total snippets, total forks, and public snippet counts.
 - **Responsive UI** — Clean, minimal dark design with Framer Motion animations (60 FPS) and Tailwind CSS.
 - **Performance** — Lazy loading, code splitting, `React.memo`, debounced search, and pagination.
+- **Coding Platform Mode** — Paste a problem statement to get hint-based DSA approach feedback from the AI mentor.
 
 ## Tech Stack
 
@@ -37,6 +38,7 @@ CodeTrail is a production-ready, version-controlled code snippet sharing platfor
 - Google OAuth 2.0 (`google-auth-library`)
 - JWT (`jsonwebtoken`)
 - Helmet, CORS, express-rate-limit
+- Groq AI (LLM-powered code analysis)
 
 ## Folder Structure
 
@@ -47,6 +49,9 @@ CodeTrail/
 │   │   └── db.js
 │   ├── controllers/
 │   │   ├── authController.js
+│   │   ├── analysisController.js
+│   │   ├── commentController.js
+│   │   ├── likeController.js
 │   │   ├── searchController.js
 │   │   ├── snippetController.js
 │   │   ├── userController.js
@@ -54,11 +59,17 @@ CodeTrail/
 │   ├── middleware/
 │   │   └── authMiddleware.js
 │   ├── models/
+│   │   ├── Analysis.js
+│   │   ├── Comment.js
+│   │   ├── Like.js
 │   │   ├── Snippet.js
 │   │   ├── User.js
 │   │   └── Version.js
 │   ├── routes/
+│   │   ├── analysisRoutes.js
 │   │   ├── authRoutes.js
+│   │   ├── commentRoutes.js
+│   │   ├── likeRoutes.js
 │   │   ├── searchRoutes.js
 │   │   ├── snippetRoutes.js
 │   │   ├── userRoutes.js
@@ -97,6 +108,7 @@ CodeTrail/
     │   ├── store/
     │   │   └── AuthContext.jsx
     │   ├── utils/
+    │   │   ├── complexity.js
     │   │   ├── diff.js
     │   │   └── reconstructVersion.js
     │   ├── App.jsx
@@ -139,8 +151,11 @@ Create a `.env` file in the `backend/` directory:
 PORT=5000
 JWT_SECRET=your-secret-key
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 MONGO_URI=mongodb://127.0.0.1:27017/codetrail
 CLIENT_URL=http://localhost:5173
+SESSION_SECRET=your-session-secret
+GROQ_API_KEY=your-groq-api-key
 ```
 
 Create a `.env` file in the `frontend/` directory:
@@ -163,6 +178,52 @@ npm run dev
 ```
 
 Visit `http://localhost:5173` in your browser.
+
+## Deployment
+
+### Frontend — Vercel (Free Tier)
+
+1. Push the repository to GitHub.
+2. Go to [vercel.com](https://vercel.com) and click **Add New → Project**.
+3. Import your GitHub repository.
+4. Set the **Root Directory** to `frontend/`.
+5. Add the following **Environment Variables**:
+   - `VITE_API_URL` — set to your Render backend URL (e.g. `https://codetrail-api.onrender.com/api`)
+   - `VITE_GOOGLE_CLIENT_ID` — your Google OAuth client ID
+6. Click **Deploy**. Vercel will auto-detect Vite and build the project.
+
+### Backend — Render (Free Tier)
+
+1. Push the repository to GitHub.
+2. Go to [render.com](https://render.com) and click **New → Web Service**.
+3. Connect your GitHub repository.
+4. Configure the service:
+   - **Name**: `codetrail-api`
+   - **Root Directory**: `backend`
+   - **Runtime**: Node
+   - **Build Command**: `npm install`
+   - **Start Command**: `npm start`
+   - **Plan**: Free
+5. Add the following **Environment Variables**:
+   - `NODE_ENV`: `production`
+   - `PORT`: `10000`
+   - `MONGO_URI`: Your MongoDB connection string (use [MongoDB Atlas](https://www.mongodb.com/atlas) free tier)
+   - `JWT_SECRET`: A secure random string
+   - `GOOGLE_CLIENT_ID`: Your Google OAuth client ID
+   - `GOOGLE_CLIENT_SECRET`: Your Google OAuth client secret
+   - `CLIENT_URL`: Your Vercel frontend URL (e.g. `https://codetrail.vercel.app`)
+   - `SESSION_SECRET`: A secure random string
+   - `GROQ_API_KEY`: Your Groq API key (optional, for AI code analysis)
+6. Click **Create Web Service**.
+
+### After Deployment
+
+1. Update your **Google Cloud Console** OAuth redirect URIs to include both:
+   - `http://localhost:5173` (local dev)
+   - `https://codetrail.vercel.app` (production frontend)
+2. Update the **Authorized JavaScript origins** to include:
+   - `http://localhost:5173`
+   - `https://codetrail.vercel.app`
 
 ## API Endpoints
 
@@ -200,6 +261,12 @@ Visit `http://localhost:5173` in your browser.
 | ------ | -------- | ----------- |
 | GET | `/api/search/public?q=term&language=js&tag=react&page=1&limit=12` | Search public snippets (paginated) |
 
+### Analysis
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| POST | `/api/analysis/analyze` | Run AI code analysis on a snippet version (protected) |
+
 ### Users
 
 | Method | Endpoint | Description |
@@ -208,6 +275,17 @@ Visit `http://localhost:5173` in your browser.
 | GET | `/api/users/:userId` | Get a public user profile with their public snippets |
 | GET | `/api/users/:userId/stats` | Get a public user's stats |
 
+### Comments & Likes
+
+| Method | Endpoint | Description |
+| ------ | -------- | ----------- |
+| GET | `/api/comments/:snippetId` | Get comments for a snippet |
+| POST | `/api/comments/:snippetId` | Add a comment (protected) |
+| DELETE | `/api/comments/:commentId` | Delete your comment (protected) |
+| GET | `/api/likes/:snippetId` | Get like count and liked status |
+| POST | `/api/likes/:snippetId` | Like a snippet (protected) |
+| DELETE | `/api/likes/:snippetId` | Unlike a snippet (protected) |
+
 ## How Versioning Works
 
 1. **Creating a snippet** stores a full snapshot for version 1.
@@ -215,23 +293,11 @@ Visit `http://localhost:5173` in your browser.
 3. **Viewing a version** reconstructs the code by finding the nearest snapshot at or before the requested version and replaying stored diffs forward.
 4. **Diff viewer** compares two versions' code using the LCS algorithm in `utils/diff.js`, highlighting added lines in green, deleted lines in red, and unchanged lines in gray.
 
-## Screenshots
-
-| Dashboard | Snippet View |
-|-----------|--------------|
-| _Screenshot placeholder_ | _Screenshot placeholder_ |
-
-| Create Snippet | Diff Viewer |
-|----------------|-------------|
-| _Screenshot placeholder_ | _Screenshot placeholder_ |
-
 ## Future Improvements
 
 - Automated test suite (Jest + React Testing Library)
-- CI/CD pipeline with Docker
+- CI/CD pipeline
 - Dark/light theme toggle
 - Real-time collaboration (WebSockets)
 - Markdown rendering for snippet descriptions
-- Comments and likes on snippets
-- Deployment to Vercel/Netlify (frontend) + Render/Railway (backend)
 - Vault-backed secret management

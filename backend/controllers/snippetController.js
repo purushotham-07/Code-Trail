@@ -38,9 +38,9 @@ const validateSnippetInput = ({ title, language, code }) => {
 
 // Express-validator compatible handler that returns the first validation error.
 const getValidationError = (req) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return errors.array()[0]?.msg || 'Validation failed';
+  const analysisErrors = validationResult(req);
+  if (!analysisErrors.isEmpty()) {
+    return analysisErrors.array()[0]?.msg || 'Validation failed';
   }
   return null;
 };
@@ -66,6 +66,7 @@ export const createSnippet = async (req, res) => {
       code,
       isPublic = true,
       commitMessage = "",
+      problemStatement = "",
     } = req.body;
 
     console.log("Checking input...");
@@ -98,6 +99,7 @@ export const createSnippet = async (req, res) => {
       owner: ownerId,
       isPublic,
       currentVersion: 1,
+      problemStatement: String(problemStatement || '').slice(0, 5000),
     });
 
     console.log("Snippet Created:", snippet._id);
@@ -162,6 +164,7 @@ export const editSnippet = async (req, res) => {
         : snippet.tags;
     }
     if (req.body.isPublic !== undefined) snippet.isPublic = Boolean(req.body.isPublic);
+    if (req.body.problemStatement !== undefined) snippet.problemStatement = String(req.body.problemStatement || '').slice(0, 5000);
     snippet.currentVersion = nextVersion;
     snippet.updatedAt = new Date();
     await snippet.save();
@@ -295,6 +298,7 @@ export const forkSnippet = async (req, res) => {
       owner: req.user.id,
       isPublic: true,
       currentVersion: 1,
+      problemStatement: original.problemStatement || '',
       forkInfo: {
         sourceSnippetId: original._id,
         forkedFrom: original.title,

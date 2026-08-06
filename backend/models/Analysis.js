@@ -39,7 +39,7 @@ const analysisSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
-    errors: {
+    analysisErrors: {
       type: [String],
       default: [],
     },
@@ -75,6 +75,29 @@ const analysisSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+
+    // --- Coding Platform Mode fields ---
+    problemStatement: {
+      type: String,
+      default: '',
+    },
+    isOptimal: {
+      type: Boolean,
+      default: null,
+    },
+    recommendedDataStructures: {
+      type: [String],
+      default: [],
+    },
+    hints: {
+      type: [String],
+      default: [],
+    },
+    approachExplanation: {
+      type: String,
+      default: '',
+    },
+
     createdAt: {
       type: Date,
       default: Date.now,
