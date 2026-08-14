@@ -1,6 +1,8 @@
 {
   "name": "codetrail",
   "version": "1.0.0",
+  "author": "Purushotham Reddy",
+  "license": "MIT",
   "private": true,
   "workspaces": [
     "backend",

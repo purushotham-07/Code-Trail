@@ -16,80 +16,246 @@ const markRequest = (userId) => {
 const FALLBACK_LIBRARY = {
   binarySearch: {
     algorithm: 'Binary Search',
+    approach: 'Optimal (Divide & Conquer / Two Pointers)',
     timeComplexity: 'O(log n)',
     spaceComplexity: 'O(1)',
-    explanation: 'The code repeatedly halves the search range, so the work grows logarithmically with input size.',
-    analysisErrors: [],
+    overallScore: 9,
+    ratings: {
+      performance: 9,
+      readability: 9,
+      maintainability: 8,
+      security: 9,
+      scalability: 9,
+    },
+    explanation: 'The code repeatedly halves the search interval, achieving logarithmic time complexity with constant auxiliary space.',
+    summary: 'Clean implementation of binary search with efficient logarithmic lookup.',
+    issues: [],
+    strengths: [
+      'Logarithmic time complexity minimizes search iterations on sorted inputs.',
+      'In-place search with O(1) extra memory overhead.',
+    ],
     suggestions: [
-      'Use left + (right - left) / 2 to avoid integer overflow when computing the midpoint.',
-      'Add input validation for empty or null arrays before searching.',
+      'Use mid = left + Math.floor((right - left) / 2) to prevent potential integer overflow in large array bounds.',
+      'Add input validation to handle null or empty arrays gracefully.',
+    ],
+    securityIssues: [],
+    performanceImprovements: [
+      'Ensure input is sorted prior to invocation, or document precondition in function JSDoc/types.',
+    ],
+    futureSuggestions: [
+      'Consider generalizing to a lower_bound / upper_bound binary search helper for range queries.',
+    ],
+    designPatterns: ['Binary Search Pattern', 'Two Pointers'],
+    interviewQuestions: [
+      'How would you find the first or last occurrence of a duplicate element using binary search?',
+      'How does binary search behave on rotated sorted arrays?',
     ],
     category: 'DSA',
+    subCategory: 'Searching Algorithms',
     isDSA: true,
   },
   mergeSort: {
     algorithm: 'Merge Sort',
+    approach: 'Optimal (Divide & Conquer)',
     timeComplexity: 'O(n log n)',
     spaceComplexity: 'O(n)',
-    explanation: 'The array is split recursively and merged back together, producing a stable divide-and-conquer runtime.',
-    analysisErrors: [],
+    overallScore: 8,
+    ratings: {
+      performance: 8,
+      readability: 8,
+      maintainability: 8,
+      security: 9,
+      scalability: 8,
+    },
+    explanation: 'Divide and conquer sorting algorithm that recursively halves the array and merges sorted subarrays in linear time.',
+    summary: 'Stable O(n log n) sorting algorithm with guaranteed performance bounds.',
+    issues: [],
+    strengths: [
+      'Guaranteed O(n log n) worst-case time complexity.',
+      'Stable sorting preserves the relative order of equal elements.',
+    ],
     suggestions: [
-      'Consider an in-place merge variant to reduce the O(n) auxiliary space.',
-      'Add a base-case threshold to switch to insertion sort for small subarrays.',
+      'For small subarray partitions (length <= 15), switch to Insertion Sort to reduce recursive call overhead.',
+      'Pre-allocate auxiliary buffer arrays to reduce garbage collection churn.',
+    ],
+    securityIssues: [],
+    performanceImprovements: [
+      'Reuse a single temporary buffer across recursive merge calls to reduce memory allocations.',
+    ],
+    futureSuggestions: [
+      'Implement an iterative (bottom-up) variant to eliminate call-stack recursion overhead.',
+    ],
+    designPatterns: ['Divide and Conquer'],
+    interviewQuestions: [
+      'Why is Merge Sort preferred over QuickSort for sorting linked lists?',
+      'How can Merge Sort be parallelized for multi-core processors?',
     ],
     category: 'DSA',
+    subCategory: 'Sorting Algorithms',
     isDSA: true,
   },
   bfs: {
-    algorithm: 'Breadth-First Search',
+    algorithm: 'Breadth-First Search (BFS)',
+    approach: 'Optimal (Queue-based Level Order Traversal)',
     timeComplexity: 'O(V + E)',
     spaceComplexity: 'O(V)',
-    explanation: 'Graph traversal visits each vertex and each edge once, which makes the runtime linear in the graph size.',
-    analysisErrors: [],
+    overallScore: 8,
+    ratings: {
+      performance: 8,
+      readability: 9,
+      maintainability: 8,
+      security: 9,
+      scalability: 8,
+    },
+    explanation: 'Traverses graph or tree level by level using a queue, guaranteeing the shortest path in unweighted graphs.',
+    summary: 'Level-order graph exploration ensuring shortest path discovery in unweighted graphs.',
+    issues: [],
+    strengths: [
+      'Finds shortest path in unweighted graphs efficiently.',
+      'Iterative queue structure prevents stack overflow.',
+    ],
     suggestions: [
-      'Use a visited set to prevent revisiting nodes in cyclic graphs.',
-      'Consider early termination once the target node is found.',
+      'Ensure a visited set/array is maintained to prevent infinite cycles in cyclic graphs.',
+      'Add early exit as soon as the target destination node is dequeued.',
+    ],
+    securityIssues: [],
+    performanceImprovements: [
+      'Use a double-ended queue or circular array pointer instead of Array.shift() to avoid O(N) dequeue overhead.',
+    ],
+    futureSuggestions: [
+      'Support bidirectional BFS for larger graph search spaces.',
+    ],
+    designPatterns: ['Queue-based Traversal'],
+    interviewQuestions: [
+      'How does 0-1 BFS work for graphs with edge weights of only 0 and 1?',
+      'When is BFS preferred over DFS for finding connectivity?',
     ],
     category: 'DSA',
+    subCategory: 'Graph Algorithms',
     isDSA: true,
   },
   dfs: {
-    algorithm: 'Depth-First Search',
+    algorithm: 'Depth-First Search (DFS)',
+    approach: 'Optimal (Recursive / Stack Traversal)',
     timeComplexity: 'O(V + E)',
     spaceComplexity: 'O(V)',
-    explanation: 'Depth-first traversal explores each node and its descendants recursively, keeping the stack proportional to the depth.',
-    analysisErrors: [],
+    overallScore: 8,
+    ratings: {
+      performance: 8,
+      readability: 9,
+      maintainability: 8,
+      security: 9,
+      scalability: 8,
+    },
+    explanation: 'Explores deepest nodes along each branch before backtracking, utilizing recursion or an explicit stack.',
+    summary: 'Deep branch-first traversal ideal for connectivity, topological sorting, and cycle detection.',
+    issues: [],
+    strengths: [
+      'Simple, elegant recursive implementation.',
+      'Easily tracks path history and ancestor states during backtracking.',
+    ],
     suggestions: [
-      'Convert recursive DFS to an iterative stack-based approach to avoid stack overflow on deep graphs.',
-      'Track visited nodes to prevent infinite loops in cyclic graphs.',
+      'Use an explicit iterative stack if graph depth can exceed runtime recursion limits.',
+      'Track visited state per node to avoid cyclic loops.',
+    ],
+    securityIssues: [],
+    performanceImprovements: [
+      'Use typed arrays or bitsets for visited flags when vertex count is fixed and dense.',
+    ],
+    futureSuggestions: [
+      'Implement Tarjan or Kosaraju algorithm for strongly connected components if needed.',
+    ],
+    designPatterns: ['Recursive Backtracking', 'Graph Traversal'],
+    interviewQuestions: [
+      'How do you detect cycles in directed vs undirected graphs using DFS?',
+      'How does topological sort leverage DFS post-order finishing times?',
     ],
     category: 'DSA',
+    subCategory: 'Graph Algorithms',
     isDSA: true,
   },
   bubbleSort: {
     algorithm: 'Bubble Sort',
+    approach: 'Brute Force (Adjacent Comparison)',
     timeComplexity: 'O(n^2)',
     spaceComplexity: 'O(1)',
-    explanation: 'Adjacent elements are repeatedly swapped until the array is ordered, which leads to quadratic runtime in the worst case.',
-    analysisErrors: [],
+    overallScore: 5,
+    ratings: {
+      performance: 3,
+      readability: 7,
+      maintainability: 6,
+      security: 8,
+      scalability: 3,
+    },
+    explanation: 'Repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.',
+    summary: 'Simple comparison sort with quadratic time complexity; not recommended for production datasets.',
+    issues: [
+      {
+        title: 'Suboptimal quadratic time complexity',
+        severity: 'Medium',
+        line: 1,
+        column: 1,
+        description: 'Nested loops result in O(n^2) runtime which degrades severely on large inputs.',
+        fix: 'Replace with QuickSort, MergeSort, or native sort method (e.g. Array.prototype.sort / std::sort).',
+      },
+    ],
+    strengths: ['Simple to understand and teach.', 'In-place sorting with O(1) auxiliary space.'],
     suggestions: [
-      'Add an early-exit flag when no swaps occur in a pass to improve best-case to O(n).',
-      'Consider replacing bubble sort with a more efficient algorithm like quicksort or merge sort for large inputs.',
+      'Add a boolean swapped flag to exit early if no swaps occurred in a pass (improves best-case to O(n)).',
+      'Replace bubble sort with Merge Sort or QuickSort for performance-sensitive code.',
+    ],
+    securityIssues: [],
+    performanceImprovements: [
+      'Upgrade algorithm from O(n^2) to O(n log n) sorting.',
+    ],
+    futureSuggestions: [],
+    designPatterns: [],
+    interviewQuestions: [
+      'What is the best, average, and worst-case time complexity of optimized Bubble Sort?',
+      'Why is Bubble Sort considered stable?',
     ],
     category: 'DSA',
+    subCategory: 'Sorting Algorithms',
     isDSA: true,
   },
   dynamicProgramming: {
     algorithm: 'Dynamic Programming',
+    approach: 'Optimal (Memoization / Tabulation)',
     timeComplexity: 'O(n * m)',
     spaceComplexity: 'O(n * m)',
-    explanation: 'The state is reused over a table of overlapping subproblems, which reduces repeated work across the search space.',
-    analysisErrors: [],
+    overallScore: 8,
+    ratings: {
+      performance: 8,
+      readability: 8,
+      maintainability: 8,
+      security: 9,
+      scalability: 8,
+    },
+    explanation: 'Solves complex problems by breaking them down into simpler subproblems and storing intermediate results.',
+    summary: 'Subproblem caching avoiding duplicate calculations across overlapping states.',
+    issues: [],
+    strengths: [
+      'Eliminates exponential branching by caching overlapping subproblem results.',
+      'Optimal substructure guarantees global optimality.',
+    ],
     suggestions: [
-      'Optimize space by keeping only the previous row/column when the state depends only on adjacent values.',
-      'Add memoization to avoid recomputing overlapping subproblems.',
+      'Optimize space complexity from O(n * m) to O(min(n, m)) by maintaining only the previous state row/column.',
+      'Check base cases and boundary constraints to prevent out-of-bounds array access.',
+    ],
+    securityIssues: [],
+    performanceImprovements: [
+      'Space-compress DP table if current transition only references the previous row.',
+    ],
+    futureSuggestions: [
+      'Consider bitmask DP or segment tree optimization if state space expands.',
+    ],
+    designPatterns: ['Dynamic Programming', 'Memoization'],
+    interviewQuestions: [
+      'What are the key differences between Top-Down (Memoization) and Bottom-Up (Tabulation)?',
+      'How do you identify if a problem satisfies optimal substructure and overlapping subproblems?',
     ],
     category: 'DSA',
+    subCategory: 'Dynamic Programming',
     isDSA: true,
   },
 };
@@ -129,17 +295,41 @@ const detectAlgorithm = (code = '') => {
 const buildFallbackAnalysis = (code = '', language = 'javascript') => {
   const key = detectAlgorithm(code);
   const match = FALLBACK_LIBRARY[key] || {
-    algorithm: 'Unrecognized pattern',
+    algorithm: 'General Code Review',
+    approach: 'Standard Implementation',
     timeComplexity: 'N/A',
     spaceComplexity: 'N/A',
-    explanation: 'No standard DSA pattern could be confidently inferred from the sample code.',
-    analysisErrors: [],
-    suggestions: [
-      'Add meaningful variable and function names to improve readability.',
-      'Include error handling for edge cases and unexpected inputs.',
-      'Add comments to explain non-obvious logic.',
+    overallScore: 7,
+    ratings: {
+      performance: 7,
+      readability: 8,
+      maintainability: 7,
+      security: 8,
+      scalability: 7,
+    },
+    explanation: 'Code structure reviewed for syntax, clarity, error handling, and performance considerations.',
+    summary: 'Standard implementation reviewed against general software design and clean code principles.',
+    issues: [],
+    strengths: [
+      'Readable logic flow and straightforward structure.',
     ],
-    category: 'Other',
+    suggestions: [
+      'Add meaningful variable and function names to improve self-documenting readability.',
+      'Include robust error handling for unexpected inputs and null/undefined edge cases.',
+      'Add inline comments or documentation explaining non-obvious business logic.',
+    ],
+    securityIssues: [],
+    performanceImprovements: [
+      'Validate input parameters early to prevent unhandled runtime exceptions.',
+    ],
+    futureSuggestions: [
+      'Add unit tests covering edge cases, boundary inputs, and error states.',
+    ],
+    designPatterns: [],
+    interviewQuestions: [],
+    learningResources: [],
+    category: 'General',
+    subCategory: 'Code Review',
     isDSA: false,
   };
 
@@ -147,13 +337,31 @@ const buildFallbackAnalysis = (code = '', language = 'javascript') => {
     source: 'fallback',
     language,
     algorithm: match.algorithm,
+    approach: match.approach,
     timeComplexity: match.timeComplexity,
     spaceComplexity: match.spaceComplexity,
+    overallScore: match.overallScore,
+    ratings: match.ratings,
     explanation: match.explanation,
-    analysisErrors: match.analysisErrors,
-    suggestions: match.suggestions,
+    summary: match.summary,
+    issues: match.issues || [],
+    analysisErrors: (match.issues || []).map((i) => `${i.title} (Line ${i.line})`),
+    strengths: match.strengths || [],
+    suggestions: match.suggestions || [],
+    securityIssues: match.securityIssues || [],
+    performanceImprovements: match.performanceImprovements || [],
+    futureSuggestions: match.futureSuggestions || [],
+    designPatterns: match.designPatterns || [],
+    interviewQuestions: match.interviewQuestions || [],
+    learningResources: match.learningResources || [],
     category: match.category,
+    subCategory: match.subCategory,
     isDSA: match.isDSA,
+    hasSyntaxErrors: false,
+    errorLines: [],
+    correctedCode: '',
+    optimizedCode: '',
+    dataStructureRecommendations: '',
   };
 };
 
@@ -172,224 +380,150 @@ const extractGroqJson = (text) => {
 };
 
 /*
- * Standard analysis prompt — used for general code review.
- *
- * Key enhancements over the original prompt:
- *  1. Explicitly asks the model to include exact line numbers (and column where
- *     possible) for every syntax / runtime / logical error so the frontend can
- *     highlight the offending line in the editor.
- *  2. For DSA problems, asks for a detailed "optimization approach" that
- *     recommends specific data structures (array, hashmap, heap, tree, etc.)
- *     and explains *why* each one helps.
+ * Standard code analysis prompt — engineered for high precision code reviews.
  */
 const promptForGroq = (code, language) => `
-You are an expert Software Engineer, DSA Expert, Code Reviewer, Technical Interviewer, System Designer, and Security Auditor.
+You are a Staff Software Engineer, Lead Code Reviewer, Security Auditor, and Competitive Programming Specialist.
 
-Your task is to analyze the given ${language} code accurately.
+Perform a thorough, expert-level review of the provided ${language} code.
 
-IMPORTANT RULES
-- Return ONLY valid JSON.
-- Do NOT use markdown.
-- Do NOT wrap JSON inside \`\`\`.
-- Do NOT return explanations outside JSON.
-- Never invent information.
-- Never report fake issues.
-- If no issue exists, return an empty array.
-- If the code is already optimal, return "Already Optimal" in optimizedCode.
-- If the submitted code contains errors, first provide the corrected version before suggesting an optimized solution.
-- Suggest a better algorithm ONLY if one actually exists.
+STRICT OUTPUT RULES:
+- Return ONLY a single valid JSON object.
+- Absolutely NO markdown wrapping (no \`\`\`json or \`\`\`).
+- No commentary or text outside the JSON object.
+- Never invent issues; if the code is solid, return empty arrays.
+- Accurately identify 1-based line numbers for all issues.
 
-----------------------------------------
-STEP 1 — Category
+EVALUATION CRITERIA:
+1. CATEGORY: DSA | Frontend | Backend | Full Stack | Security | DevOps | Other
+2. CORRECTNESS & ISSUES:
+   Check for syntax errors, off-by-one errors, unhandled null/undefined, memory leaks, security holes (XSS, injection, prototype pollution), and performance bottlenecks.
+   Every issue MUST have:
+   - title (concise summary)
+   - severity ("Low" | "Medium" | "High" | "Critical")
+   - line (1-based integer line number or null if global)
+   - column (1-based integer or null)
+   - description (clear explanation of why this is an issue)
+   - fix (exact actionable fix)
+3. RATINGS (Scale of 1 to 10 integers):
+   - overallScore
+   - ratings: { performance, readability, maintainability, security, scalability }
+4. DSA & ALGORITHMIC ANALYSIS (if applicable):
+   - algorithm: exact name
+   - approach: "Brute Force" | "Better" | "Optimal"
+   - timeComplexity: Big-O notation (e.g., "O(N log N)")
+   - spaceComplexity: Big-O notation (e.g., "O(1)")
+   - dataStructureRecommendations: recommend specific data structures (e.g. HashMap, Min-Heap, Monotonic Deque, Trie) and justify why.
+5. CODE GENERATION:
+   - correctedCode: If the code has syntax/runtime bugs, provide the complete corrected code. Otherwise "".
+   - optimizedCode: If the code can be optimized with better time/space complexity or cleaner architecture, provide the complete optimized code. If already optimal, return "".
+6. INTERVIEW & LEARNING:
+   - strengths: 2-4 positive patterns observed
+   - suggestions: 2-4 concrete refactoring/improvement suggestions
+   - securityIssues: specific security points
+   - performanceImprovements: specific performance points
+   - interviewQuestions: 2-3 technical interview questions based on this code
+   - summary: 2-3 sentence executive summary
 
-Determine the category: DSA | Backend | Frontend | Full Stack | API | Database | Machine Learning | Other
-
-----------------------------------------
-STEP 2 — Find real issues (with exact locations)
-
-Check for:
-- Syntax Errors
-- Logical Bugs
-- Runtime Errors
-- Edge Cases
-- Memory Issues
-- Performance Bottlenecks
-- Code Smells
-- Readability Problems
-- Maintainability Problems
-- Security Vulnerabilities
-
-For EVERY issue, you MUST include:
-- title: short one-line summary
-- severity: Low | Medium | High | Critical
-- line: the 1-based line number where the issue starts
-- column: the 1-based column number (best effort)
-- description: what the problem is
-- fix: how to fix it
-
-If the code has NO syntax errors, set hasSyntaxErrors = false.
-If there ARE syntax errors, set hasSyntaxErrors = true and list them with exact line and column.
-
-----------------------------------------
-STEP 3 (DSA only) — Approach & Data Structure Recommendations
-
-Identify:
-- Algorithm name
-- Algorithm pattern
-- Approach: Brute Force | Better | Optimal
-- Time Complexity
-- Space Complexity
-
-For the optimization approach, recommend SPECIFIC data structures (e.g., HashMap, TreeSet, Heap, Segment Tree, Disjoint Set Union, Monotonic Deque, Trie, etc.) and explain WHY each one improves the solution.
-
-If the submitted solution is incorrect:
-- Explain why
-- Generate correctedCode
-
-If a better algorithm exists:
-- Explain why it is better
-- Recommend the data structures that make the better algorithm work
-- Generate optimizedCode with lower TC/SC
-
-Otherwise:
-- optimizedCode = "Already Optimal"
-
-Provide:
-- Dry Run
-- Interview Tips
-- Common Mistakes
-
-----------------------------------------
-STEP 4 (Non-DSA) — Architecture review
-Review: Architecture | Folder Structure | Reusability | Modularity | Naming | Error Handling | Validation | Authentication | Authorization | Database Usage | API Design | Performance | Scalability | Security | Clean Code Principles
-
-----------------------------------------
-STEP 5 — Rate (1-10): Code Quality | Performance | Readability | Maintainability | Security | Scalability
-
-----------------------------------------
-STEP 6 — Suggest improvements: Refactoring | Better Naming | Better Data Structures | Better Algorithms | Better Libraries | Design Patterns | Performance Improvements | Future Improvements
-
-----------------------------------------
-STEP 7 — Generate improved code ONLY if meaningful improvements exist.
-Do NOT rewrite code just for formatting.
-
-Return exactly this JSON:
-
+EXPECTED JSON SCHEMA:
 {
-  "category":"",
-  "subCategory":"",
-  "isDSA":false,
-  "hasSyntaxErrors":false,
-
-  "overallScore":0,
-
-  "ratings":{
-    "performance":0,
-    "readability":0,
-    "maintainability":0,
-    "security":0,
-    "scalability":0
+  "category": "string",
+  "subCategory": "string",
+  "isDSA": false,
+  "hasSyntaxErrors": false,
+  "overallScore": 8,
+  "ratings": {
+    "performance": 8,
+    "readability": 8,
+    "maintainability": 8,
+    "security": 8,
+    "scalability": 8
   },
-
-  "algorithm":"",
-  "approach":"",
-  "timeComplexity":"",
-  "spaceComplexity":"",
-  "dataStructureRecommendations":"",
-
-  "issues":[
+  "algorithm": "",
+  "approach": "",
+  "timeComplexity": "",
+  "spaceComplexity": "",
+  "dataStructureRecommendations": "",
+  "explanation": "High-level summary of what the code does and how it works.",
+  "summary": "Concise 2-sentence summary of the code review findings.",
+  "issues": [
     {
-      "title":"",
-      "severity":"Low | Medium | High | Critical",
-      "line":"",
-      "column":"",
-      "description":"",
-      "fix":""
+      "title": "Short title",
+      "severity": "Low | Medium | High | Critical",
+      "line": 1,
+      "column": 1,
+      "description": "Explanation",
+      "fix": "Actionable solution"
     }
   ],
-
-  "strengths":[],
-
-  "suggestions":[],
-
-  "securityIssues":[],
-
-  "performanceImprovements":[],
-
-  "futureSuggestions":[],
-
-  "designPatterns":[],
-
-  "correctedCode":"",
-
-  "optimizedCode":"",
-
-  "explanation":"",
-
-  "interviewQuestions":[],
-
-  "learningResources":[],
-
-  "summary":""
+  "strengths": ["...", "..."],
+  "suggestions": ["...", "..."],
+  "securityIssues": ["..."],
+  "performanceImprovements": ["..."],
+  "futureSuggestions": ["..."],
+  "designPatterns": ["..."],
+  "correctedCode": "",
+  "optimizedCode": "",
+  "interviewQuestions": ["..."],
+  "learningResources": ["..."]
 }
 
 Language: ${language}
 
-Code:
+Source Code:
 ${code}
 `;
 
 /*
- * Coding-platform prompt — used when problemStatement is provided.
- *
- * Instead of giving a full optimized solution, the model is instructed to:
- *  1. Determine whether the user's approach is optimal for the stated
- *     problem.
- *  2. If NOT optimal, provide HINTS about which data structures or
- *     algorithmic patterns to consider — without handing over the answer.
- *  3. Recommend specific data structures and explain why they fit the
- *     problem constraints.
+ * Coding Platform Mentor Prompt — engineered for hint-based DSA coaching.
  */
 const promptForCodingPlatform = (code, language, problemStatement) => `
-You are an expert DSA coach and competitive-programming mentor.
+You are a senior algorithmic interview coach and competitive programming mentor.
 
-The user has pasted a coding-platform problem below, along with their
-attempted solution.  Your job is to act as a patient mentor: check whether
-their approach is optimal, and if it is not, give them HINTS — not full
-solutions — that steer them toward the right data structures and algorithmic
-patterns.
+The candidate has submitted their code alongside the problem statement below.
+Your role is to evaluate their approach and provide progressive hints WITHOUT giving away the full solution code.
 
-STRICT RULES
-- Return ONLY valid JSON. No markdown, no fences, no prose outside JSON.
-- Never invent information.
-- If the approach IS optimal, say so and provide brief confirmation.
-- If the approach is NOT optimal, provide 2-4 actionable hints that mention
-  the recommended data structures (e.g., HashMap, Heap, Segment Tree,
-  Disjoint Set Union, Monotonic Deque, etc.) and explain WHY each helps with
-  the problem's constraints.
-- Do NOT give the complete optimized code.  Provide only hints.
+STRICT OUTPUT RULES:
+- Return ONLY a single valid JSON object.
+- NO markdown formatting (no \`\`\`json or \`\`\`).
+- No prose outside JSON.
+
+MENTORING GUIDELINES:
+1. Determine if the candidate's approach is optimal for the problem constraints.
+2. Provide 3 progressive hints:
+   - Tier 1 (Intuition / High Level): Guides thinking on what pattern or property to observe.
+   - Tier 2 (Data Structure & Complexity): Suggests the ideal data structures (e.g. Monotonic Stack, Two Pointers, Fenwick Tree, Union-Find) and explains why they meet the problem constraints.
+   - Tier 3 (Algorithm & Edge Cases): Outlines key transitions and edge cases to watch out for.
+3. Highlight Common Mistakes that interview candidates frequently make on this problem.
 
 PROBLEM STATEMENT:
 ${problemStatement}
 
-Return exactly this JSON shape:
+CANDIDATE'S CODE (${language}):
+${code}
 
+EXPECTED JSON SCHEMA:
 {
   "isOptimal": false,
-  "approachExplanation": "A clear explanation of the user's current approach and whether it is optimal.",
-  "recommendedDataStructures": ["HashMap — to achieve O(1) lookups ...", "Min-Heap — to maintain the k largest element ..."],
-  "hints": [
-    "Hint 1: What data structure gives you O(1) average-time lookups? How could that eliminate the inner loop?",
-    "Hint 2: Think about the problem constraints (N up to 10^5). What is the complexity of your current approach? Can a monotonic deque or a sliding-window pattern reduce it to O(N)?"
+  "approachExplanation": "Clear, encouraging explanation of the candidate's current approach, its time/space complexity, and whether it meets the problem constraints.",
+  "recommendedDataStructures": [
+    "HashMap — achieves O(1) lookups to eliminate quadratic scanning",
+    "Min-Heap — maintains the top K elements in O(log K) per insertion"
   ],
-  "commonMistakes": ["...", "..."],
-  "learningResources": ["Link or resource name", "..."]
+  "hints": [
+    "Hint 1 (Intuition): Think about whether you need to re-examine all previous elements or only the most recent ones.",
+    "Hint 2 (Data Structure): What data structure allows O(1) amortized queries for this property?",
+    "Hint 3 (Edge Cases): Make sure to test empty inputs, single element arrays, and duplicate values."
+  ],
+  "commonMistakes": [
+    "Forgetting to handle duplicate keys in the frequency map.",
+    "Using recursion which causes stack overflow on deep inputs (N > 10^4)."
+  ],
+  "learningResources": [
+    "LeetCode Pattern: Sliding Window & Two Pointers",
+    "NeetCode 150 - Core Data Structures"
+  ]
 }
-
-Language: ${language}
-
-User's code:
-${code}
 `;
 
 const buildCodingPlatformResult = (problemStatement) => ({
@@ -404,31 +538,23 @@ const buildCodingPlatformResult = (problemStatement) => ({
   approachExplanation: '',
   commonMistakes: [],
   learningResources: [],
+  isDSA: true,
+  category: 'DSA',
 });
 
-/*
- * Convert an array of {title, severity, line, column, ...} issue objects
- * into plain-text strings that the frontend can parse for line numbers AND
- * display in the error sidebar.
- */
 const issuesToText = (issues = []) => {
   if (!Array.isArray(issues)) return [];
   return issues.map((issue) => {
     const parts = [];
     if (issue.title) parts.push(issue.title);
-    if (issue.severity) parts.push(`(${issue.severity})`);
+    if (issue.severity) parts.push(`[${issue.severity}]`);
     if (issue.line) parts.push(`Line ${issue.line}`);
-    if (issue.column) parts.push(`col ${issue.column}`);
     if (issue.description) parts.push(issue.description);
     if (issue.fix) parts.push(`Fix: ${issue.fix}`);
     return parts.join(' — ');
   });
 };
 
-/*
- * Extract unique, positive line numbers from an array of issue objects so
- * that the frontend can highlight them inside the CodeMirror editor.
- */
 const extractErrorLinesFromIssues = (issues = []) => {
   if (!Array.isArray(issues)) return [];
   const lineNumbers = new Set();
@@ -473,7 +599,7 @@ export const analyzeSnippetCode = async (req, res) => {
       }
     }
 
-    // Keep a check on API requests — cooldown to prevent rate-limit abuse.
+    // Cooldown check
     const cooldownRemaining = checkCooldown(req.user.id);
     if (cooldownRemaining > 0) {
       return res.status(429).json({
@@ -482,8 +608,6 @@ export const analyzeSnippetCode = async (req, res) => {
     }
 
     // --- Coding Platform Mode ---
-    // When a problem statement is supplied, the analysis takes a hint-based
-    // mentoring approach instead of a full code review.
     if (codingPlatformMode && problemStatement.trim()) {
       markRequest(req.user.id);
 
@@ -506,6 +630,8 @@ export const analyzeSnippetCode = async (req, res) => {
           fromCache: true,
           groqEnabled: Boolean(cached.groqEnabled),
           groqError: cached.groqError || '',
+          category: 'DSA',
+          isDSA: true,
         });
       }
 
@@ -513,7 +639,7 @@ export const analyzeSnippetCode = async (req, res) => {
         return res.json({
           ...buildCodingPlatformResult(problemStatement),
           groqEnabled: false,
-          groqError: 'AI service is temporarily unavailable. Please provide a GROQ_API_KEY to enable coding-platform analysis.',
+          groqError: 'AI service is temporarily unavailable. Please provide GROQ_API_KEY to enable mentor analysis.',
         });
       }
 
@@ -569,50 +695,46 @@ export const analyzeSnippetCode = async (req, res) => {
         analysisErrors: [],
         category: 'DSA',
         isDSA: true,
+        groqEnabled: true,
+        groqError: '',
       };
 
-      // Persist the coding-platform analysis for caching.
-      // Use findOneAndUpdate with upsert to avoid E11000 duplicate key errors
-      // when concurrent requests target the same snippetId + versionNumber.
-      // $setOnInsert ensures existing documents are left untouched.
-      await Analysis.findOneAndUpdate(
-        {
-          snippetId: activeSnippetId || null,
-          versionNumber: normalizedVersion,
-        },
-        {
-          $setOnInsert: {
-            explanation: result.approachExplanation,
-            category: result.category,
-            isDSA: result.isDSA,
-            source: result.source,
-            groqEnabled: true,
-            groqError: '',
-            problemStatement: result.problemStatement,
-            isOptimal: result.isOptimal,
-            recommendedDataStructures: result.recommendedDataStructures,
-            hints: result.hints,
-            commonMistakes: result.commonMistakes,
-            learningResources: result.learningResources,
-            analysisErrors: [],
-            suggestions: [],
+      if (activeSnippetId) {
+        await Analysis.findOneAndUpdate(
+          {
+            snippetId: activeSnippetId,
+            versionNumber: normalizedVersion,
           },
-        },
-        { upsert: true },
-      );
+          {
+            $set: {
+              explanation: result.approachExplanation,
+              category: result.category,
+              isDSA: result.isDSA,
+              source: result.source,
+              groqEnabled: true,
+              groqError: '',
+              problemStatement: result.problemStatement,
+              isOptimal: result.isOptimal,
+              recommendedDataStructures: result.recommendedDataStructures,
+              hints: result.hints,
+              commonMistakes: result.commonMistakes,
+              learningResources: result.learningResources,
+            },
+          },
+          { upsert: true, new: true }
+        );
+      }
 
       return res.json(result);
     }
 
     // --- Standard Code Review Mode ---
-
-    // Check for cached standard analysis.
     const cached = await Analysis.findOne({
       snippetId: activeSnippetId,
       versionNumber: normalizedVersion,
     }).lean();
 
-    if (cached) {
+    if (cached && (cached.overallScore > 0 || cached.explanation)) {
       markRequest(req.user.id);
       return res.json({
         ...cached,
@@ -621,13 +743,26 @@ export const analyzeSnippetCode = async (req, res) => {
         groqError: cached.groqError || '',
         analysisErrors: cached.analysisErrors || [],
         errors: cached.analysisErrors || [],
+        issues: cached.issues || [],
+        strengths: cached.strengths || [],
         suggestions: cached.suggestions || [],
+        securityIssues: cached.securityIssues || [],
+        performanceImprovements: cached.performanceImprovements || [],
         futureSuggestions: cached.futureSuggestions || [],
+        designPatterns: cached.designPatterns || [],
+        correctedCode: cached.correctedCode || '',
         optimizedCode: cached.optimizedCode || '',
+        interviewQuestions: cached.interviewQuestions || [],
+        learningResources: cached.learningResources || [],
         category: cached.category || '',
+        subCategory: cached.subCategory || '',
         isDSA: cached.isDSA ?? false,
         timeComplexity: cached.complexity?.timeComplexity || cached.timeComplexity || '',
         spaceComplexity: cached.complexity?.spaceComplexity || cached.spaceComplexity || '',
+        algorithm: cached.complexity?.algorithm || cached.algorithm || '',
+        approach: cached.approach || '',
+        overallScore: cached.overallScore || 0,
+        ratings: cached.ratings || { performance: 0, readability: 0, maintainability: 0, security: 0, scalability: 0 },
       });
     }
 
@@ -640,9 +775,6 @@ export const analyzeSnippetCode = async (req, res) => {
         source: 'local',
         groqEnabled: false,
         groqError: 'AI service is temporarily unavailable. Showing cached/local analysis instead.',
-        errors: fallbackResult.analysisErrors,
-        timeComplexity: fallbackResult.timeComplexity,
-        spaceComplexity: fallbackResult.spaceComplexity,
       };
       return res.json(localResult);
     }
@@ -681,9 +813,6 @@ export const analyzeSnippetCode = async (req, res) => {
         source: 'local',
         groqEnabled: true,
         groqError: 'AI service is temporarily unavailable. Showing cached/local analysis instead.',
-        errors: fallbackResult.analysisErrors,
-        timeComplexity: fallbackResult.timeComplexity,
-        spaceComplexity: fallbackResult.spaceComplexity,
       };
       return res.json(localResult);
     }
@@ -692,35 +821,51 @@ export const analyzeSnippetCode = async (req, res) => {
     const text = payload?.choices?.[0]?.message?.content || '';
     const parsed = extractGroqJson(text) || {};
 
-    // Convert structured issues [{title, line, column, ...}] into plain-text
-    // strings for the sidebar display, and also collect line numbers for
-    // editor highlighting.
-    const issuesArray = Array.isArray(parsed.issues) ? parsed.issues : [];
-    const issueTexts = issuesToText(issuesArray);
-    const errorLineNumbers = extractErrorLinesFromIssues(issuesArray);
+    const rawIssues = Array.isArray(parsed.issues) ? parsed.issues : [];
+    const formattedIssues = rawIssues.map((iss) => ({
+      title: iss.title || '',
+      severity: ['Low', 'Medium', 'High', 'Critical'].includes(iss.severity) ? iss.severity : 'Medium',
+      line: Number.isFinite(Number(iss.line)) && Number(iss.line) > 0 ? Number(iss.line) : null,
+      column: Number.isFinite(Number(iss.column)) && Number(iss.column) > 0 ? Number(iss.column) : null,
+      description: iss.description || '',
+      fix: iss.fix || '',
+    }));
+
+    const issueTexts = issuesToText(formattedIssues);
+    const errorLineNumbers = extractErrorLinesFromIssues(formattedIssues);
 
     const result = {
-      ...fallbackResult,
-      ...parsed,
       source: 'groq',
       groqEnabled: true,
+      groqError: '',
       language,
       category: parsed.category || fallbackResult.category || 'Other',
+      subCategory: parsed.subCategory || fallbackResult.subCategory || '',
       isDSA: parsed.isDSA ?? fallbackResult.isDSA ?? false,
-      hasSyntaxErrors: parsed.hasSyntaxErrors ?? false,
+      hasSyntaxErrors: parsed.hasSyntaxErrors ?? (errorLineNumbers.length > 0),
       errorLines: errorLineNumbers,
-      analysisErrors: parsed.issues
-        ? issueTexts.length > 0 ? issueTexts : fallbackResult.analysisErrors
-        : fallbackResult.analysisErrors,
-      // Backwards-compat alias for the frontend
-      errors: parsed.issues
-        ? issueTexts.length > 0 ? issueTexts : fallbackResult.analysisErrors
-        : fallbackResult.analysisErrors,
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : fallbackResult.suggestions,
-      futureSuggestions: Array.isArray(parsed.futureSuggestions) ? parsed.futureSuggestions : [],
-      optimizedCode: parsed.optimizedCode || '',
-      explanation: parsed.explanation || fallbackResult.explanation,
+      overallScore: Number.isFinite(Number(parsed.overallScore)) ? Number(parsed.overallScore) : fallbackResult.overallScore,
+      ratings: parsed.ratings || fallbackResult.ratings,
+      algorithm: parsed.algorithm || fallbackResult.algorithm || '',
+      approach: parsed.approach || fallbackResult.approach || '',
+      timeComplexity: parsed.timeComplexity || fallbackResult.timeComplexity || '',
+      spaceComplexity: parsed.spaceComplexity || fallbackResult.spaceComplexity || '',
       dataStructureRecommendations: parsed.dataStructureRecommendations || '',
+      explanation: parsed.explanation || fallbackResult.explanation,
+      summary: parsed.summary || fallbackResult.summary || '',
+      issues: formattedIssues.length > 0 ? formattedIssues : fallbackResult.issues,
+      analysisErrors: issueTexts.length > 0 ? issueTexts : fallbackResult.analysisErrors,
+      errors: issueTexts.length > 0 ? issueTexts : fallbackResult.analysisErrors,
+      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : fallbackResult.strengths,
+      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : fallbackResult.suggestions,
+      securityIssues: Array.isArray(parsed.securityIssues) ? parsed.securityIssues : fallbackResult.securityIssues,
+      performanceImprovements: Array.isArray(parsed.performanceImprovements) ? parsed.performanceImprovements : fallbackResult.performanceImprovements,
+      futureSuggestions: Array.isArray(parsed.futureSuggestions) ? parsed.futureSuggestions : fallbackResult.futureSuggestions,
+      designPatterns: Array.isArray(parsed.designPatterns) ? parsed.designPatterns : fallbackResult.designPatterns,
+      correctedCode: parsed.correctedCode || '',
+      optimizedCode: parsed.optimizedCode || '',
+      interviewQuestions: Array.isArray(parsed.interviewQuestions) ? parsed.interviewQuestions : fallbackResult.interviewQuestions,
+      learningResources: Array.isArray(parsed.learningResources) ? parsed.learningResources : fallbackResult.learningResources,
       complexity: {
         algorithm: parsed.algorithm || fallbackResult.algorithm,
         timeComplexity: parsed.timeComplexity || fallbackResult.timeComplexity,
@@ -728,42 +873,47 @@ export const analyzeSnippetCode = async (req, res) => {
       },
     };
 
-    // Ensure we always store something under analysisErrors
-    const dbErrors = result.analysisErrors.length > 0
-      ? result.analysisErrors
-      : (Array.isArray(parsed.issues) ? issuesToText(parsed.issues) : fallbackResult.analysisErrors);
-
-    // Use findOneAndUpdate with upsert to avoid E11000 duplicate key errors
-    // when concurrent requests target the same snippetId + versionNumber.
-    // $setOnInsert ensures existing documents are left untouched.
-    await Analysis.findOneAndUpdate(
-      {
-        snippetId: activeSnippetId,
-        versionNumber: normalizedVersion,
-      },
-      {
-        $setOnInsert: {
-          explanation: result.explanation,
-          complexity: result.complexity,
-          suggestions: result.suggestions,
-          futureSuggestions: result.futureSuggestions,
-          analysisErrors: dbErrors,
-          category: result.category,
-          isDSA: result.isDSA,
-          hasSyntaxErrors: result.hasSyntaxErrors,
-          errorLines: errorLineNumbers,
-          source: result.source,
-          groqEnabled: result.groqEnabled,
-          groqError: '',
-          optimizedCode: result.optimizedCode,
-          dataStructureRecommendations: result.dataStructureRecommendations,
-          ...(codingPlatformMode && problemStatement.trim()
-            ? { problemStatement, isOptimal: result.isOptimal, hints: result.hints }
-            : {}),
+    if (activeSnippetId) {
+      await Analysis.findOneAndUpdate(
+        {
+          snippetId: activeSnippetId,
+          versionNumber: normalizedVersion,
         },
-      },
-      { upsert: true },
-    );
+        {
+          $set: {
+            category: result.category,
+            subCategory: result.subCategory,
+            isDSA: result.isDSA,
+            hasSyntaxErrors: result.hasSyntaxErrors,
+            errorLines: result.errorLines,
+            overallScore: result.overallScore,
+            ratings: result.ratings,
+            algorithm: result.algorithm,
+            approach: result.approach,
+            complexity: result.complexity,
+            dataStructureRecommendations: result.dataStructureRecommendations,
+            explanation: result.explanation,
+            summary: result.summary,
+            issues: result.issues,
+            analysisErrors: result.analysisErrors,
+            strengths: result.strengths,
+            suggestions: result.suggestions,
+            securityIssues: result.securityIssues,
+            performanceImprovements: result.performanceImprovements,
+            futureSuggestions: result.futureSuggestions,
+            designPatterns: result.designPatterns,
+            correctedCode: result.correctedCode,
+            optimizedCode: result.optimizedCode,
+            interviewQuestions: result.interviewQuestions,
+            learningResources: result.learningResources,
+            source: result.source,
+            groqEnabled: true,
+            groqError: '',
+          },
+        },
+        { upsert: true, new: true }
+      );
+    }
 
     markRequest(req.user.id);
     return res.json(result);

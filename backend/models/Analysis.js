@@ -1,5 +1,17 @@
 import mongoose from 'mongoose';
 
+const issueSchema = new mongoose.Schema(
+  {
+    title: { type: String, default: '' },
+    severity: { type: String, default: 'Medium' },
+    line: { type: Number, default: null },
+    column: { type: Number, default: null },
+    description: { type: String, default: '' },
+    fix: { type: String, default: '' },
+  },
+  { _id: false }
+);
+
 const analysisSchema = new mongoose.Schema(
   {
     snippetId: {
@@ -13,37 +25,11 @@ const analysisSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
-    explanation: {
+    category: {
       type: String,
       default: '',
     },
-    complexity: {
-      algorithm: {
-        type: String,
-        default: '',
-      },
-      timeComplexity: {
-        type: String,
-        default: '',
-      },
-      spaceComplexity: {
-        type: String,
-        default: '',
-      },
-    },
-    suggestions: {
-      type: [String],
-      default: [],
-    },
-    futureSuggestions: {
-      type: [String],
-      default: [],
-    },
-    analysisErrors: {
-      type: [String],
-      default: [],
-    },
-    category: {
+    subCategory: {
       type: String,
       default: '',
     },
@@ -51,11 +37,103 @@ const analysisSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    referenceCode: {
+    hasSyntaxErrors: {
+      type: Boolean,
+      default: false,
+    },
+    errorLines: {
+      type: [Number],
+      default: [],
+    },
+    overallScore: {
+      type: Number,
+      default: 0,
+    },
+    ratings: {
+      performance: { type: Number, default: 0 },
+      readability: { type: Number, default: 0 },
+      maintainability: { type: Number, default: 0 },
+      security: { type: Number, default: 0 },
+      scalability: { type: Number, default: 0 },
+    },
+    algorithm: {
+      type: String,
+      default: '',
+    },
+    approach: {
+      type: String,
+      default: '',
+    },
+    complexity: {
+      algorithm: { type: String, default: '' },
+      timeComplexity: { type: String, default: '' },
+      spaceComplexity: { type: String, default: '' },
+    },
+    dataStructureRecommendations: {
+      type: String,
+      default: '',
+    },
+    explanation: {
+      type: String,
+      default: '',
+    },
+    summary: {
+      type: String,
+      default: '',
+    },
+    issues: {
+      type: [issueSchema],
+      default: [],
+    },
+    analysisErrors: {
+      type: [String],
+      default: [],
+    },
+    strengths: {
+      type: [String],
+      default: [],
+    },
+    suggestions: {
+      type: [String],
+      default: [],
+    },
+    securityIssues: {
+      type: [String],
+      default: [],
+    },
+    performanceImprovements: {
+      type: [String],
+      default: [],
+    },
+    futureSuggestions: {
+      type: [String],
+      default: [],
+    },
+    designPatterns: {
+      type: [String],
+      default: [],
+    },
+    correctedCode: {
       type: String,
       default: '',
     },
     optimizedCode: {
+      type: String,
+      default: '',
+    },
+    interviewQuestions: {
+      type: [String],
+      default: [],
+    },
+    learningResources: {
+      type: [String],
+      default: [],
+    },
+    commonMistakes: {
+      type: [String],
+      default: [],
+    },
+    referenceCode: {
       type: String,
       default: '',
     },

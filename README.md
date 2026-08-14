@@ -301,3 +301,9 @@ Visit `http://localhost:5173` in your browser.
 - Real-time collaboration (WebSockets)
 - Markdown rendering for snippet descriptions
 - Vault-backed secret management
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+**Author:** Purushotham Reddy

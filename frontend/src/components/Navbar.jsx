@@ -29,11 +29,9 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2 text-lg font-semibold text-white">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <path d="M12 2 L15 8 L22 9 L17 14 L18 21 L12 18.5 L6 21 L7 14 L2 9 L9 8 Z" className="text-blue-400" />
-          </svg>
-          CodeTrail
+        <Link to="/" className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-white hover:opacity-90 transition-opacity">
+          <img src="/logo.svg" alt="CodeTrail Logo" className="h-7 w-7 rounded-md object-contain" />
+          <span>CodeTrail</span>
         </Link>
 
         <div className="hidden items-center gap-3 md:flex">
