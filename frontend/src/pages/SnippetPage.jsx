@@ -268,12 +268,13 @@ export default function SnippetPage() {
         versionNumber: selectedVersion || snippet?.currentVersion || 1,
         codingPlatformMode,
         problemStatement: codingPlatformMode ? problemStatement.trim() : '',
+        forceRefresh: true,
       });
       setAnalysis(res.data);
-      if (res.data.optimizedCode) {
-        setActiveCodeTab('optimized');
-      } else if (res.data.correctedCode) {
+      if (res.data.correctedCode) {
         setActiveCodeTab('corrected');
+      } else if (res.data.optimizedCode) {
+        setActiveCodeTab('optimized');
       }
       setError('');
     } catch (err) {
@@ -1034,6 +1035,69 @@ export default function SnippetPage() {
                     ) : (
                       /* Standard Code Review Output */
                       <div className="space-y-4">
+                        {/* Prominent Syntax & Issues Alert Card */}
+                        {analysis.hasSyntaxErrors || (analysis.issues?.length > 0) ? (
+                          <div className="rounded-lg border border-rose-500/50 bg-rose-950/25 p-4 space-y-3 shadow-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-6 w-6 items-center justify-center rounded bg-rose-500/20 text-rose-400 font-bold">
+                                ⚠️
+                              </span>
+                              <div>
+                                <h3 className="text-sm font-bold text-rose-300">
+                                  {analysis.hasSyntaxErrors ? 'Syntax / Compiler Errors Detected' : 'Code Issues Detected'}
+                                </h3>
+                                <p className="text-xs text-rose-200/80">
+                                  {analysis.issues?.length || 1} {analysis.issues?.length === 1 ? 'issue' : 'issues'} found in {snippet.language || 'code'}. Review the details below.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2.5 pt-1">
+                              {(analysis.issues || []).map((iss, i) => (
+                                <div
+                                  key={`review-iss-${i}`}
+                                  className="rounded-md border border-rose-900/60 bg-rose-950/40 p-3 space-y-1.5 text-xs"
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
+                                          iss.severity === 'Critical'
+                                            ? 'bg-rose-600 text-white'
+                                            : iss.severity === 'High'
+                                            ? 'bg-orange-600 text-white'
+                                            : 'bg-amber-600 text-slate-900'
+                                        }`}
+                                      >
+                                        {iss.severity || 'Issue'}
+                                      </span>
+                                      <span className="font-semibold text-rose-200">{iss.title}</span>
+                                    </div>
+                                    {iss.line && (
+                                      <span className="rounded bg-rose-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-300">
+                                        Line {iss.line}{iss.column ? `, Col ${iss.column}` : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                  {iss.description && (
+                                    <p className="text-slate-300 leading-relaxed">{iss.description}</p>
+                                  )}
+                                  {iss.fix && (
+                                    <p className="rounded bg-slate-950/80 p-2 font-mono text-[11px] text-emerald-300 border border-slate-800">
+                                      💡 Fix: {iss.fix}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 text-xs text-emerald-300">
+                            <span>✅</span>
+                            <span><strong>Syntax Valid:</strong> No syntax or compilation errors detected in this {snippet.language || 'code'}.</span>
+                          </div>
+                        )}
+
                         {/* Score & Rating Overview */}
                         {analysis.overallScore > 0 && (
                           <div className="rounded-lg border border-slate-800 bg-slate-950 p-4">

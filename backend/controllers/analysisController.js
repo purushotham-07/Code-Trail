@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Analysis from '../models/Analysis.js';
 
 const aiCooldowns = new Map();
@@ -11,6 +12,181 @@ const checkCooldown = (userId) => {
 
 const markRequest = (userId) => {
   aiCooldowns.set(userId, Date.now());
+};
+
+const CANDIDATE_MODELS = [
+  process.env.GROQ_MODEL,
+  'openai/gpt-oss-120b',
+  'openai/gpt-oss-20b',
+  'groq/compound',
+].filter(Boolean);
+
+/**
+ * Deterministic static syntax and parser pre-check.
+ * Runs instantly for all languages to catch obvious syntax mistakes, unclosed brackets,
+ * missing colons in Python, invalid for-loop syntax in JS, JSON parse failures, and SQL errors.
+ */
+export const detectStaticSyntaxErrors = (code = '', language = 'javascript') => {
+  const issues = [];
+  const lang = String(language || 'javascript').trim().toLowerCase();
+  const lines = code.split('\n');
+
+  // 1. Bracket & Brace matching across all languages
+  const stack = [];
+  const pairs = { '}': '{', ')': '(', ']': '[' };
+  const opening = new Set(['{', '(', '[']);
+  const closing = new Set(['}', ')', ']']);
+
+  lines.forEach((lineText, lineIdx) => {
+    const lineNum = lineIdx + 1;
+    // Skip comments
+    const trimmed = lineText.trim();
+    if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('/*')) return;
+
+    let inString = false;
+    let stringChar = '';
+
+    for (let colIdx = 0; colIdx < lineText.length; colIdx += 1) {
+      const ch = lineText[colIdx];
+      const prev = colIdx > 0 ? lineText[colIdx - 1] : '';
+
+      if ((ch === '"' || ch === "'" || ch === '`') && prev !== '\\') {
+        if (!inString) {
+          inString = true;
+          stringChar = ch;
+        } else if (stringChar === ch) {
+          inString = false;
+          stringChar = '';
+        }
+        continue;
+      }
+
+      if (!inString) {
+        if (opening.has(ch)) {
+          stack.push({ char: ch, line: lineNum, col: colIdx + 1 });
+        } else if (closing.has(ch)) {
+          if (stack.length === 0 || stack[stack.length - 1].char !== pairs[ch]) {
+            issues.push({
+              title: `Unmatched closing bracket '${ch}'`,
+              severity: 'Critical',
+              line: lineNum,
+              column: colIdx + 1,
+              description: `Found unexpected '${ch}' with no matching '${pairs[ch]}'.`,
+              fix: `Remove the extra '${ch}' or add the opening '${pairs[ch]}'.`,
+            });
+          } else {
+            stack.pop();
+          }
+        }
+      }
+    }
+  });
+
+  // Any unclosed opening brackets
+  if (stack.length > 0) {
+    const unclosed = stack.pop();
+    issues.push({
+      title: `Unclosed bracket '${unclosed.char}'`,
+      severity: 'Critical',
+      line: unclosed.line,
+      column: unclosed.col,
+      description: `Bracket '${unclosed.char}' was opened on line ${unclosed.line} but never closed.`,
+      fix: `Add matching closing bracket '${unclosed.char === '{' ? '}' : unclosed.char === '(' ? ')' : ']'}' before the end of block.`,
+    });
+  }
+
+  // 2. Python-specific syntax validation
+  if (lang === 'python') {
+    const blockHeaders = /^\s*(def\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(.*\)|if\s+.*|elif\s+.*|else|for\s+.*|while\s+.*|class\s+[a-zA-Z_][a-zA-Z0-9_]*.*|try|except.*|finally)\s*$/;
+    lines.forEach((lineText, lineIdx) => {
+      const lineNum = lineIdx + 1;
+      const trimmed = lineText.trim();
+      if (!trimmed || trimmed.startsWith('#')) return;
+
+      if (blockHeaders.test(trimmed) && !trimmed.endsWith(':')) {
+        issues.push({
+          title: 'Missing colon in statement header',
+          severity: 'Critical',
+          line: lineNum,
+          column: lineText.length,
+          description: `Python compound statement "${trimmed}" must end with a colon (:).`,
+          fix: `Append ':' at the end of line ${lineNum}: "${trimmed}:"`,
+        });
+      }
+    });
+  }
+
+  // 3. JavaScript / TypeScript for-loop separator check
+  if (lang === 'javascript' || lang === 'typescript') {
+    lines.forEach((lineText, lineIdx) => {
+      const lineNum = lineIdx + 1;
+      const forMatch = lineText.match(/for\s*\(\s*(?:let|var|const)\s+[^;)]+\)/);
+      if (forMatch && !lineText.includes(' of ') && !lineText.includes(' in ')) {
+        const semicolons = (forMatch[0].match(/;/g) || []).length;
+        if (semicolons < 2) {
+          issues.push({
+            title: 'Syntax error in for loop header',
+            severity: 'Critical',
+            line: lineNum,
+            column: lineText.indexOf('for'),
+            description: 'Standard 3-part for-loop requires two semicolon separators: for (init; condition; update).',
+            fix: 'Add the missing semicolon between the loop condition and the increment expression.',
+          });
+        }
+      }
+    });
+  }
+
+  // 4. JSON parse check
+  if (lang === 'json') {
+    try {
+      JSON.parse(code);
+    } catch (jsonErr) {
+      const match = jsonErr.message.match(/position\s+(\d+)/i);
+      let lineNum = 1;
+      if (match) {
+        const pos = Number(match[1]);
+        lineNum = code.slice(0, pos).split('\n').length;
+      }
+      issues.push({
+        title: 'JSON Parse Error',
+        severity: 'Critical',
+        line: lineNum,
+        column: 1,
+        description: jsonErr.message,
+        fix: 'Ensure valid JSON format with double quotes around keys and no trailing commas.',
+      });
+    }
+  }
+
+  // 5. SQL keyword typo check
+  if (lang === 'sql') {
+    lines.forEach((lineText, lineIdx) => {
+      const lineNum = lineIdx + 1;
+      if (/\bWHER\b/i.test(lineText)) {
+        issues.push({
+          title: "SQL keyword typo 'WHER'",
+          severity: 'Critical',
+          line: lineNum,
+          column: lineText.search(/\bWHER\b/i) + 1,
+          description: "Keyword 'WHER' is misspelled.",
+          fix: "Replace 'WHER' with 'WHERE'.",
+        });
+      }
+      if (/^\s*GROUP\s+BY\s*$/i.test(lineText.trim())) {
+        issues.push({
+          title: 'Incomplete GROUP BY clause',
+          severity: 'Critical',
+          line: lineNum,
+          column: 1,
+          description: 'GROUP BY clause requires at least one column expression.',
+          fix: 'Specify the grouping column(s), e.g., GROUP BY column_name.',
+        });
+      }
+    });
+  }
+
+  return issues;
 };
 
 const FALLBACK_LIBRARY = {
@@ -94,229 +270,48 @@ const FALLBACK_LIBRARY = {
     subCategory: 'Sorting Algorithms',
     isDSA: true,
   },
-  bfs: {
-    algorithm: 'Breadth-First Search (BFS)',
-    approach: 'Optimal (Queue-based Level Order Traversal)',
-    timeComplexity: 'O(V + E)',
-    spaceComplexity: 'O(V)',
-    overallScore: 8,
-    ratings: {
-      performance: 8,
-      readability: 9,
-      maintainability: 8,
-      security: 9,
-      scalability: 8,
-    },
-    explanation: 'Traverses graph or tree level by level using a queue, guaranteeing the shortest path in unweighted graphs.',
-    summary: 'Level-order graph exploration ensuring shortest path discovery in unweighted graphs.',
-    issues: [],
-    strengths: [
-      'Finds shortest path in unweighted graphs efficiently.',
-      'Iterative queue structure prevents stack overflow.',
-    ],
-    suggestions: [
-      'Ensure a visited set/array is maintained to prevent infinite cycles in cyclic graphs.',
-      'Add early exit as soon as the target destination node is dequeued.',
-    ],
-    securityIssues: [],
-    performanceImprovements: [
-      'Use a double-ended queue or circular array pointer instead of Array.shift() to avoid O(N) dequeue overhead.',
-    ],
-    futureSuggestions: [
-      'Support bidirectional BFS for larger graph search spaces.',
-    ],
-    designPatterns: ['Queue-based Traversal'],
-    interviewQuestions: [
-      'How does 0-1 BFS work for graphs with edge weights of only 0 and 1?',
-      'When is BFS preferred over DFS for finding connectivity?',
-    ],
-    category: 'DSA',
-    subCategory: 'Graph Algorithms',
-    isDSA: true,
-  },
-  dfs: {
-    algorithm: 'Depth-First Search (DFS)',
-    approach: 'Optimal (Recursive / Stack Traversal)',
-    timeComplexity: 'O(V + E)',
-    spaceComplexity: 'O(V)',
-    overallScore: 8,
-    ratings: {
-      performance: 8,
-      readability: 9,
-      maintainability: 8,
-      security: 9,
-      scalability: 8,
-    },
-    explanation: 'Explores deepest nodes along each branch before backtracking, utilizing recursion or an explicit stack.',
-    summary: 'Deep branch-first traversal ideal for connectivity, topological sorting, and cycle detection.',
-    issues: [],
-    strengths: [
-      'Simple, elegant recursive implementation.',
-      'Easily tracks path history and ancestor states during backtracking.',
-    ],
-    suggestions: [
-      'Use an explicit iterative stack if graph depth can exceed runtime recursion limits.',
-      'Track visited state per node to avoid cyclic loops.',
-    ],
-    securityIssues: [],
-    performanceImprovements: [
-      'Use typed arrays or bitsets for visited flags when vertex count is fixed and dense.',
-    ],
-    futureSuggestions: [
-      'Implement Tarjan or Kosaraju algorithm for strongly connected components if needed.',
-    ],
-    designPatterns: ['Recursive Backtracking', 'Graph Traversal'],
-    interviewQuestions: [
-      'How do you detect cycles in directed vs undirected graphs using DFS?',
-      'How does topological sort leverage DFS post-order finishing times?',
-    ],
-    category: 'DSA',
-    subCategory: 'Graph Algorithms',
-    isDSA: true,
-  },
-  bubbleSort: {
-    algorithm: 'Bubble Sort',
-    approach: 'Brute Force (Adjacent Comparison)',
-    timeComplexity: 'O(n^2)',
-    spaceComplexity: 'O(1)',
-    overallScore: 5,
-    ratings: {
-      performance: 3,
-      readability: 7,
-      maintainability: 6,
-      security: 8,
-      scalability: 3,
-    },
-    explanation: 'Repeatedly steps through the list, compares adjacent elements and swaps them if they are in the wrong order.',
-    summary: 'Simple comparison sort with quadratic time complexity; not recommended for production datasets.',
-    issues: [
-      {
-        title: 'Suboptimal quadratic time complexity',
-        severity: 'Medium',
-        line: 1,
-        column: 1,
-        description: 'Nested loops result in O(n^2) runtime which degrades severely on large inputs.',
-        fix: 'Replace with QuickSort, MergeSort, or native sort method (e.g. Array.prototype.sort / std::sort).',
-      },
-    ],
-    strengths: ['Simple to understand and teach.', 'In-place sorting with O(1) auxiliary space.'],
-    suggestions: [
-      'Add a boolean swapped flag to exit early if no swaps occurred in a pass (improves best-case to O(n)).',
-      'Replace bubble sort with Merge Sort or QuickSort for performance-sensitive code.',
-    ],
-    securityIssues: [],
-    performanceImprovements: [
-      'Upgrade algorithm from O(n^2) to O(n log n) sorting.',
-    ],
-    futureSuggestions: [],
-    designPatterns: [],
-    interviewQuestions: [
-      'What is the best, average, and worst-case time complexity of optimized Bubble Sort?',
-      'Why is Bubble Sort considered stable?',
-    ],
-    category: 'DSA',
-    subCategory: 'Sorting Algorithms',
-    isDSA: true,
-  },
-  dynamicProgramming: {
-    algorithm: 'Dynamic Programming',
-    approach: 'Optimal (Memoization / Tabulation)',
-    timeComplexity: 'O(n * m)',
-    spaceComplexity: 'O(n * m)',
-    overallScore: 8,
-    ratings: {
-      performance: 8,
-      readability: 8,
-      maintainability: 8,
-      security: 9,
-      scalability: 8,
-    },
-    explanation: 'Solves complex problems by breaking them down into simpler subproblems and storing intermediate results.',
-    summary: 'Subproblem caching avoiding duplicate calculations across overlapping states.',
-    issues: [],
-    strengths: [
-      'Eliminates exponential branching by caching overlapping subproblem results.',
-      'Optimal substructure guarantees global optimality.',
-    ],
-    suggestions: [
-      'Optimize space complexity from O(n * m) to O(min(n, m)) by maintaining only the previous state row/column.',
-      'Check base cases and boundary constraints to prevent out-of-bounds array access.',
-    ],
-    securityIssues: [],
-    performanceImprovements: [
-      'Space-compress DP table if current transition only references the previous row.',
-    ],
-    futureSuggestions: [
-      'Consider bitmask DP or segment tree optimization if state space expands.',
-    ],
-    designPatterns: ['Dynamic Programming', 'Memoization'],
-    interviewQuestions: [
-      'What are the key differences between Top-Down (Memoization) and Bottom-Up (Tabulation)?',
-      'How do you identify if a problem satisfies optimal substructure and overlapping subproblems?',
-    ],
-    category: 'DSA',
-    subCategory: 'Dynamic Programming',
-    isDSA: true,
-  },
 };
 
 const normalize = (value = '') => String(value).toLowerCase();
 
 const detectAlgorithm = (code = '') => {
   const text = normalize(code);
-
   if (/(binary search|mid.*left|right.*mid|while.*left.*right|low.*high)/.test(text)) {
     return 'binarySearch';
   }
-
   if (/(merge sort|merge\(|left.*mid.*right)/.test(text)) {
     return 'mergeSort';
   }
-
-  if (/(queue|deque|breadth|bfs)/.test(text)) {
-    return 'bfs';
-  }
-
-  if (/(stack|dfs|depth|visited\[.*\]|recurs)/.test(text)) {
-    return 'dfs';
-  }
-
-  if (/(dp\[|dynami(c|cs)|memo|lru)/.test(text)) {
-    return 'dynamicProgramming';
-  }
-
-  if (/(bubble sort|swap.*arr\[j|arr\[j\+1\]|j \+ 1)/.test(text)) {
-    return 'bubbleSort';
-  }
-
   return null;
 };
 
 const buildFallbackAnalysis = (code = '', language = 'javascript') => {
+  const staticIssues = detectStaticSyntaxErrors(code, language);
   const key = detectAlgorithm(code);
   const match = FALLBACK_LIBRARY[key] || {
     algorithm: 'General Code Review',
     approach: 'Standard Implementation',
     timeComplexity: 'N/A',
     spaceComplexity: 'N/A',
-    overallScore: 7,
+    overallScore: staticIssues.length > 0 ? 3 : 7,
     ratings: {
       performance: 7,
-      readability: 8,
+      readability: staticIssues.length > 0 ? 4 : 8,
       maintainability: 7,
       security: 8,
       scalability: 7,
     },
-    explanation: 'Code structure reviewed for syntax, clarity, error handling, and performance considerations.',
-    summary: 'Standard implementation reviewed against general software design and clean code principles.',
-    issues: [],
-    strengths: [
-      'Readable logic flow and straightforward structure.',
-    ],
+    explanation: staticIssues.length > 0
+      ? `Syntax errors detected in ${language} code. Please resolve the highlighted issues before executing.`
+      : 'Code structure reviewed for syntax, clarity, error handling, and performance considerations.',
+    summary: staticIssues.length > 0
+      ? `Critical syntax errors detected on line(s): ${staticIssues.map((i) => i.line).join(', ')}.`
+      : 'Standard implementation reviewed against general software design and clean code principles.',
+    issues: staticIssues,
+    strengths: staticIssues.length === 0 ? ['Readable logic flow and straightforward structure.'] : [],
     suggestions: [
       'Add meaningful variable and function names to improve self-documenting readability.',
       'Include robust error handling for unexpected inputs and null/undefined edge cases.',
-      'Add inline comments or documentation explaining non-obvious business logic.',
     ],
     securityIssues: [],
     performanceImprovements: [
@@ -333,6 +328,9 @@ const buildFallbackAnalysis = (code = '', language = 'javascript') => {
     isDSA: false,
   };
 
+  const allIssues = staticIssues.length > 0 ? staticIssues : (match.issues || []);
+  const issueLines = Array.from(new Set(allIssues.map((i) => Number(i.line)).filter((n) => Number.isFinite(n) && n > 0))).sort((a, b) => a - b);
+
   return {
     source: 'fallback',
     language,
@@ -340,12 +338,15 @@ const buildFallbackAnalysis = (code = '', language = 'javascript') => {
     approach: match.approach,
     timeComplexity: match.timeComplexity,
     spaceComplexity: match.spaceComplexity,
-    overallScore: match.overallScore,
+    overallScore: allIssues.length > 0 ? 3 : match.overallScore,
     ratings: match.ratings,
     explanation: match.explanation,
     summary: match.summary,
-    issues: match.issues || [],
-    analysisErrors: (match.issues || []).map((i) => `${i.title} (Line ${i.line})`),
+    issues: allIssues,
+    analysisErrors: allIssues.map((i) => `${i.title} (Line ${i.line})`),
+    errors: allIssues.map((i) => `${i.title} (Line ${i.line})`),
+    errorLines: issueLines,
+    hasSyntaxErrors: allIssues.some((i) => i.severity === 'Critical') || allIssues.length > 0,
     strengths: match.strengths || [],
     suggestions: match.suggestions || [],
     securityIssues: match.securityIssues || [],
@@ -357,8 +358,6 @@ const buildFallbackAnalysis = (code = '', language = 'javascript') => {
     category: match.category,
     subCategory: match.subCategory,
     isDSA: match.isDSA,
-    hasSyntaxErrors: false,
-    errorLines: [],
     correctedCode: '',
     optimizedCode: '',
     dataStructureRecommendations: '',
@@ -380,54 +379,39 @@ const extractGroqJson = (text) => {
 };
 
 /*
- * Standard code analysis prompt — engineered for high precision code reviews.
+ * Standard code analysis prompt — engineered for high precision syntax diagnostics & review.
  */
 const promptForGroq = (code, language) => `
-You are a Staff Software Engineer, Lead Code Reviewer, Security Auditor, and Competitive Programming Specialist.
+You are a Staff Software Engineer, Lead Compiler Diagnostics Engineer, and Code Quality Specialist.
 
-Perform a thorough, expert-level review of the provided ${language} code.
+Analyze the given ${language} code with extreme rigor and precision.
 
-STRICT OUTPUT RULES:
-- Return ONLY a single valid JSON object.
-- Absolutely NO markdown wrapping (no \`\`\`json or \`\`\`).
-- No commentary or text outside the JSON object.
-- Never invent issues; if the code is solid, return empty arrays.
-- Accurately identify 1-based line numbers for all issues.
+CRITICAL INSTRUCTIONS FOR SYNTAX & CODE ISSUES:
+1. FIRST AND FOREMOST: Check for SYNTAX ERRORS, COMPILER ERRORS, and PARSE ERRORS for ${language}.
+   - In ${language}, check for:
+     * Python: missing colons (":") after def/if/elif/else/for/while/class/try/except, indentation errors, invalid syntax, unclosed brackets/quotes.
+     * JavaScript/TypeScript: missing commas/semicolons/brackets, unexpected tokens, invalid assignments, unclosed strings/regex, for-loop syntax errors.
+     * Java/C/C++: missing semicolons (";"), missing/mismatched braces ("{}"), undeclared types/variables, invalid function/method signatures.
+     * SQL: misspelled keywords (e.g. "WHER"), missing clauses (e.g. "GROUP BY" with no columns), unclosed quotes, invalid syntax.
+     * HTML/CSS/JSON: unclosed tags, invalid CSS properties, trailing commas or missing quotes in JSON.
+   - If ANY syntax or parse error is present:
+     * You MUST set "hasSyntaxErrors": true.
+     * You MUST add every syntax error to the "issues" array with exact 1-based "line", "column", "severity": "Critical", clear "title", "description", and actionable "fix".
+   - If the code has NO syntax errors, set "hasSyntaxErrors": false.
 
-EVALUATION CRITERIA:
-1. CATEGORY: DSA | Frontend | Backend | Full Stack | Security | DevOps | Other
-2. CORRECTNESS & ISSUES:
-   Check for syntax errors, off-by-one errors, unhandled null/undefined, memory leaks, security holes (XSS, injection, prototype pollution), and performance bottlenecks.
-   Every issue MUST have:
-   - title (concise summary)
-   - severity ("Low" | "Medium" | "High" | "Critical")
-   - line (1-based integer line number or null if global)
-   - column (1-based integer or null)
-   - description (clear explanation of why this is an issue)
-   - fix (exact actionable fix)
-3. RATINGS (Scale of 1 to 10 integers):
-   - overallScore
-   - ratings: { performance, readability, maintainability, security, scalability }
-4. DSA & ALGORITHMIC ANALYSIS (if applicable):
-   - algorithm: exact name
-   - approach: "Brute Force" | "Better" | "Optimal"
-   - timeComplexity: Big-O notation (e.g., "O(N log N)")
-   - spaceComplexity: Big-O notation (e.g., "O(1)")
-   - dataStructureRecommendations: recommend specific data structures (e.g. HashMap, Min-Heap, Monotonic Deque, Trie) and justify why.
-5. CODE GENERATION:
-   - correctedCode: If the code has syntax/runtime bugs, provide the complete corrected code. Otherwise "".
-   - optimizedCode: If the code can be optimized with better time/space complexity or cleaner architecture, provide the complete optimized code. If already optimal, return "".
-6. INTERVIEW & LEARNING:
-   - strengths: 2-4 positive patterns observed
-   - suggestions: 2-4 concrete refactoring/improvement suggestions
-   - securityIssues: specific security points
-   - performanceImprovements: specific performance points
-   - interviewQuestions: 2-3 technical interview questions based on this code
-   - summary: 2-3 sentence executive summary
+2. LOGICAL BUGS & RUNTIME ERRORS:
+   - Check for off-by-one errors, null/undefined/nil dereferences, division by zero, infinite loops, array out-of-bounds, resource leaks, type errors.
+   - Add them to "issues" with severity "High" or "Medium".
 
-EXPECTED JSON SCHEMA:
+3. CODE GENERATION:
+   - "correctedCode": If the code contains ANY syntax or logical errors, you MUST provide the complete, working, bug-free corrected version of the code in ${language}.
+   - "optimizedCode": If the code can be optimized for better time/space complexity or cleaner architecture, provide the optimized version. If already optimal, return "".
+
+STRICT OUTPUT FORMAT:
+Return ONLY a single valid JSON object. Absolutely NO markdown wrapping (no \`\`\` or \`\`\`json).
+
 {
-  "category": "string",
+  "category": "DSA | Frontend | Backend | Full Stack | Database | Security | Other",
   "subCategory": "string",
   "isDSA": false,
   "hasSyntaxErrors": false,
@@ -444,28 +428,28 @@ EXPECTED JSON SCHEMA:
   "timeComplexity": "",
   "spaceComplexity": "",
   "dataStructureRecommendations": "",
-  "explanation": "High-level summary of what the code does and how it works.",
-  "summary": "Concise 2-sentence summary of the code review findings.",
+  "explanation": "High-level summary of the code and findings.",
+  "summary": "Concise summary.",
   "issues": [
     {
-      "title": "Short title",
-      "severity": "Low | Medium | High | Critical",
+      "title": "Syntax Error / Issue summary",
+      "severity": "Critical | High | Medium | Low",
       "line": 1,
       "column": 1,
-      "description": "Explanation",
-      "fix": "Actionable solution"
+      "description": "Clear explanation",
+      "fix": "Exact fix"
     }
   ],
-  "strengths": ["...", "..."],
-  "suggestions": ["...", "..."],
-  "securityIssues": ["..."],
-  "performanceImprovements": ["..."],
-  "futureSuggestions": ["..."],
-  "designPatterns": ["..."],
-  "correctedCode": "",
+  "strengths": [],
+  "suggestions": [],
+  "securityIssues": [],
+  "performanceImprovements": [],
+  "futureSuggestions": [],
+  "designPatterns": [],
+  "correctedCode": "complete working code without syntax errors",
   "optimizedCode": "",
-  "interviewQuestions": ["..."],
-  "learningResources": ["..."]
+  "interviewQuestions": [],
+  "learningResources": []
 }
 
 Language: ${language}
@@ -490,11 +474,12 @@ STRICT OUTPUT RULES:
 
 MENTORING GUIDELINES:
 1. Determine if the candidate's approach is optimal for the problem constraints.
-2. Provide 3 progressive hints:
+2. Check for syntax and runtime errors in ${language}. If present, set hasSyntaxErrors = true.
+3. Provide 3 progressive hints:
    - Tier 1 (Intuition / High Level): Guides thinking on what pattern or property to observe.
-   - Tier 2 (Data Structure & Complexity): Suggests the ideal data structures (e.g. Monotonic Stack, Two Pointers, Fenwick Tree, Union-Find) and explains why they meet the problem constraints.
-   - Tier 3 (Algorithm & Edge Cases): Outlines key transitions and edge cases to watch out for.
-3. Highlight Common Mistakes that interview candidates frequently make on this problem.
+   - Tier 2 (Data Structure & Complexity): Suggests ideal data structures (e.g. Monotonic Stack, Two Pointers, Fenwick Tree, Union-Find) and explains why they meet constraints.
+   - Tier 3 (Algorithm & Edge Cases): Outlines key transitions and edge cases.
+4. Highlight Common Mistakes.
 
 PROBLEM STATEMENT:
 ${problemStatement}
@@ -505,23 +490,24 @@ ${code}
 EXPECTED JSON SCHEMA:
 {
   "isOptimal": false,
-  "approachExplanation": "Clear, encouraging explanation of the candidate's current approach, its time/space complexity, and whether it meets the problem constraints.",
+  "hasSyntaxErrors": false,
+  "approachExplanation": "Clear explanation of candidate's approach, complexity, and constraints fit.",
   "recommendedDataStructures": [
     "HashMap — achieves O(1) lookups to eliminate quadratic scanning",
-    "Min-Heap — maintains the top K elements in O(log K) per insertion"
+    "Min-Heap — maintains top K elements in O(log K)"
   ],
   "hints": [
-    "Hint 1 (Intuition): Think about whether you need to re-examine all previous elements or only the most recent ones.",
-    "Hint 2 (Data Structure): What data structure allows O(1) amortized queries for this property?",
-    "Hint 3 (Edge Cases): Make sure to test empty inputs, single element arrays, and duplicate values."
+    "Hint 1 (Intuition): ...",
+    "Hint 2 (Data Structure): ...",
+    "Hint 3 (Edge Cases): ..."
   ],
   "commonMistakes": [
-    "Forgetting to handle duplicate keys in the frequency map.",
-    "Using recursion which causes stack overflow on deep inputs (N > 10^4)."
+    "Forgetting edge cases with duplicate values.",
+    "Using recursion which causes stack overflow on deep inputs."
   ],
   "learningResources": [
-    "LeetCode Pattern: Sliding Window & Two Pointers",
-    "NeetCode 150 - Core Data Structures"
+    "LeetCode Pattern Guide",
+    "NeetCode 150"
   ]
 }
 `;
@@ -531,6 +517,7 @@ const buildCodingPlatformResult = (problemStatement) => ({
   language: 'javascript',
   problemStatement,
   isOptimal: null,
+  hasSyntaxErrors: false,
   recommendedDataStructures: [],
   hints: [
     'Submit a valid problem statement and code to receive hint-based feedback.',
@@ -565,6 +552,54 @@ const extractErrorLinesFromIssues = (issues = []) => {
   return Array.from(lineNumbers).sort((a, b) => a - b);
 };
 
+/**
+ * Executes a chat completion request to Groq with automatic fallback to secondary models.
+ */
+async function callGroqAPI(messages) {
+  if (!process.env.GROQ_API_KEY) {
+    throw new Error('GROQ_API_KEY is not configured');
+  }
+
+  let lastError = null;
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages,
+          temperature: 0.1,
+          max_tokens: 2048,
+          top_p: 0.8,
+        }),
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        console.warn(`Model ${modelName} returned ${response.status}: ${text.slice(0, 150)}`);
+        lastError = new Error(`Groq ${modelName} status ${response.status}`);
+        continue; // Try next candidate model
+      }
+
+      const payload = await response.json();
+      const text = payload?.choices?.[0]?.message?.content || '';
+      const parsed = extractGroqJson(text);
+      if (parsed) {
+        return { parsed, modelName };
+      }
+    } catch (err) {
+      lastError = err;
+      console.warn(`Groq request to ${modelName} failed:`, err.message);
+    }
+  }
+
+  throw lastError || new Error('All candidate Groq models failed');
+}
+
 export const analyzeSnippetCode = async (req, res) => {
   try {
     const {
@@ -574,6 +609,7 @@ export const analyzeSnippetCode = async (req, res) => {
       versionNumber,
       problemStatement = '',
       codingPlatformMode = false,
+      forceRefresh = false,
     } = req.body || {};
     const normalizedCode = String(code || '').trim();
 
@@ -588,14 +624,16 @@ export const analyzeSnippetCode = async (req, res) => {
     const normalizedVersion = Number(versionNumber || 1);
     const activeSnippetId = snippetId;
 
-    if (activeSnippetId) {
-      const Snippet = (await import('../models/Snippet.js')).default;
-      const snippet = await Snippet.findById(activeSnippetId).lean();
-      if (!snippet) {
-        return res.status(404).json({ message: 'Snippet not found' });
-      }
-      if (!snippet.isPublic && snippet.owner.toString() !== req.user.id) {
-        return res.status(403).json({ message: 'You can only analyze your own private snippets.' });
+    // Check snippet access if MongoDB is connected and snippetId is provided
+    if (activeSnippetId && mongoose.connection?.readyState === 1) {
+      try {
+        const Snippet = (await import('../models/Snippet.js')).default;
+        const snippet = await Snippet.findById(activeSnippetId).lean();
+        if (snippet && !snippet.isPublic && snippet.owner.toString() !== req.user.id) {
+          return res.status(403).json({ message: 'You can only analyze your own private snippets.' });
+        }
+      } catch (_e) {
+        // Continue if snippet lookup fails
       }
     }
 
@@ -611,28 +649,30 @@ export const analyzeSnippetCode = async (req, res) => {
     if (codingPlatformMode && problemStatement.trim()) {
       markRequest(req.user.id);
 
-      const cached = await Analysis.findOne({
-        snippetId: activeSnippetId,
-        versionNumber: normalizedVersion,
-        problemStatement: { $exists: true, $ne: '' },
-      }).lean();
+      if (!forceRefresh && activeSnippetId && mongoose.connection?.readyState === 1) {
+        const cached = await Analysis.findOne({
+          snippetId: activeSnippetId,
+          versionNumber: normalizedVersion,
+          problemStatement: { $exists: true, $ne: '' },
+        }).lean();
 
-      if (cached && cached.isOptimal !== null) {
-        return res.json({
-          source: cached.source,
-          isOptimal: cached.isOptimal,
-          approachExplanation: cached.approachExplanation,
-          recommendedDataStructures: cached.recommendedDataStructures || [],
-          hints: cached.hints || [],
-          commonMistakes: cached.commonMistakes || [],
-          learningResources: cached.learningResources || [],
-          problemStatement: cached.problemStatement,
-          fromCache: true,
-          groqEnabled: Boolean(cached.groqEnabled),
-          groqError: cached.groqError || '',
-          category: 'DSA',
-          isDSA: true,
-        });
+        if (cached && cached.source === 'groq' && cached.isOptimal !== null) {
+          return res.json({
+            source: cached.source,
+            isOptimal: cached.isOptimal,
+            approachExplanation: cached.approachExplanation,
+            recommendedDataStructures: cached.recommendedDataStructures || [],
+            hints: cached.hints || [],
+            commonMistakes: cached.commonMistakes || [],
+            learningResources: cached.learningResources || [],
+            problemStatement: cached.problemStatement,
+            fromCache: true,
+            groqEnabled: true,
+            groqError: '',
+            category: 'DSA',
+            isDSA: true,
+          });
+        }
       }
 
       if (!process.env.GROQ_API_KEY) {
@@ -643,135 +683,123 @@ export const analyzeSnippetCode = async (req, res) => {
         });
       }
 
-      const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a strict code analysis engine. Return JSON only and nothing else. Do not include markdown fences, comments, or any extra text outside the JSON object.',
-            },
-            {
-              role: 'user',
-              content: promptForCodingPlatform(normalizedCode, language, problemStatement),
-            },
-          ],
-          temperature: 0.1,
-          max_tokens: 2048,
-          top_p: 0.8,
-        }),
-      });
+      try {
+        const { parsed } = await callGroqAPI([
+          {
+            role: 'system',
+            content: 'You are a strict algorithmic mentor and compiler diagnostics engine. Output strictly valid JSON with no markdown wrapping.',
+          },
+          {
+            role: 'user',
+            content: promptForCodingPlatform(normalizedCode, language, problemStatement),
+          },
+        ]);
 
-      if (!response.ok) {
-        const text = await response.text();
-        console.warn('Groq coding-platform analysis unavailable:', text.slice(0, 200));
+        const result = {
+          source: 'groq',
+          language,
+          problemStatement,
+          isOptimal: parsed.isOptimal ?? false,
+          hasSyntaxErrors: parsed.hasSyntaxErrors ?? false,
+          approachExplanation: parsed.approachExplanation || '',
+          recommendedDataStructures: Array.isArray(parsed.recommendedDataStructures) ? parsed.recommendedDataStructures : [],
+          hints: Array.isArray(parsed.hints) ? parsed.hints : [],
+          commonMistakes: Array.isArray(parsed.commonMistakes) ? parsed.commonMistakes : [],
+          learningResources: Array.isArray(parsed.learningResources) ? parsed.learningResources : [],
+          analysisErrors: [],
+          category: 'DSA',
+          isDSA: true,
+          groqEnabled: true,
+          groqError: '',
+        };
+
+        if (activeSnippetId && mongoose.connection?.readyState === 1) {
+          await Analysis.findOneAndUpdate(
+            {
+              snippetId: activeSnippetId,
+              versionNumber: normalizedVersion,
+            },
+            {
+              $set: {
+                explanation: result.approachExplanation,
+                category: result.category,
+                isDSA: result.isDSA,
+                source: result.source,
+                groqEnabled: true,
+                groqError: '',
+                problemStatement: result.problemStatement,
+                isOptimal: result.isOptimal,
+                recommendedDataStructures: result.recommendedDataStructures,
+                hints: result.hints,
+                commonMistakes: result.commonMistakes,
+                learningResources: result.learningResources,
+              },
+            },
+            { upsert: true, new: true }
+          );
+        }
+
+        return res.json(result);
+      } catch (err) {
+        console.warn('Groq coding-platform analysis unavailable, using fallback:', err.message);
         return res.json({
           ...buildCodingPlatformResult(problemStatement),
           groqEnabled: true,
-          groqError: 'AI service is temporarily unavailable. Please try again later.',
+          groqError: 'AI service is temporarily unavailable. Showing local mentor feedback instead.',
         });
       }
-
-      const payload = await response.json();
-      const text = payload?.choices?.[0]?.message?.content || '';
-      const parsed = extractGroqJson(text) || {};
-
-      const result = {
-        source: 'groq',
-        language,
-        problemStatement,
-        isOptimal: parsed.isOptimal ?? false,
-        approachExplanation: parsed.approachExplanation || '',
-        recommendedDataStructures: Array.isArray(parsed.recommendedDataStructures) ? parsed.recommendedDataStructures : [],
-        hints: Array.isArray(parsed.hints) ? parsed.hints : [],
-        commonMistakes: Array.isArray(parsed.commonMistakes) ? parsed.commonMistakes : [],
-        learningResources: Array.isArray(parsed.learningResources) ? parsed.learningResources : [],
-        analysisErrors: [],
-        category: 'DSA',
-        isDSA: true,
-        groqEnabled: true,
-        groqError: '',
-      };
-
-      if (activeSnippetId) {
-        await Analysis.findOneAndUpdate(
-          {
-            snippetId: activeSnippetId,
-            versionNumber: normalizedVersion,
-          },
-          {
-            $set: {
-              explanation: result.approachExplanation,
-              category: result.category,
-              isDSA: result.isDSA,
-              source: result.source,
-              groqEnabled: true,
-              groqError: '',
-              problemStatement: result.problemStatement,
-              isOptimal: result.isOptimal,
-              recommendedDataStructures: result.recommendedDataStructures,
-              hints: result.hints,
-              commonMistakes: result.commonMistakes,
-              learningResources: result.learningResources,
-            },
-          },
-          { upsert: true, new: true }
-        );
-      }
-
-      return res.json(result);
     }
 
     // --- Standard Code Review Mode ---
-    const cached = await Analysis.findOne({
-      snippetId: activeSnippetId,
-      versionNumber: normalizedVersion,
-    }).lean();
+    // Check cache only if not forcing refresh, snippetId exists, and previous analysis was successful Groq analysis
+    if (!forceRefresh && activeSnippetId && mongoose.connection?.readyState === 1) {
+      const cached = await Analysis.findOne({
+        snippetId: activeSnippetId,
+        versionNumber: normalizedVersion,
+      }).lean();
 
-    if (cached && (cached.overallScore > 0 || cached.explanation)) {
-      markRequest(req.user.id);
-      return res.json({
-        ...cached,
-        fromCache: true,
-        groqEnabled: Boolean(cached.groqEnabled),
-        groqError: cached.groqError || '',
-        analysisErrors: cached.analysisErrors || [],
-        errors: cached.analysisErrors || [],
-        issues: cached.issues || [],
-        strengths: cached.strengths || [],
-        suggestions: cached.suggestions || [],
-        securityIssues: cached.securityIssues || [],
-        performanceImprovements: cached.performanceImprovements || [],
-        futureSuggestions: cached.futureSuggestions || [],
-        designPatterns: cached.designPatterns || [],
-        correctedCode: cached.correctedCode || '',
-        optimizedCode: cached.optimizedCode || '',
-        interviewQuestions: cached.interviewQuestions || [],
-        learningResources: cached.learningResources || [],
-        category: cached.category || '',
-        subCategory: cached.subCategory || '',
-        isDSA: cached.isDSA ?? false,
-        timeComplexity: cached.complexity?.timeComplexity || cached.timeComplexity || '',
-        spaceComplexity: cached.complexity?.spaceComplexity || cached.spaceComplexity || '',
-        algorithm: cached.complexity?.algorithm || cached.algorithm || '',
-        approach: cached.approach || '',
-        overallScore: cached.overallScore || 0,
-        ratings: cached.ratings || { performance: 0, readability: 0, maintainability: 0, security: 0, scalability: 0 },
-      });
+      if (cached && cached.source === 'groq') {
+        markRequest(req.user.id);
+        return res.json({
+          ...cached,
+          fromCache: true,
+          groqEnabled: true,
+          groqError: '',
+          analysisErrors: cached.analysisErrors || [],
+          errors: cached.analysisErrors || [],
+          issues: cached.issues || [],
+          strengths: cached.strengths || [],
+          suggestions: cached.suggestions || [],
+          securityIssues: cached.securityIssues || [],
+          performanceImprovements: cached.performanceImprovements || [],
+          futureSuggestions: cached.futureSuggestions || [],
+          designPatterns: cached.designPatterns || [],
+          correctedCode: cached.correctedCode || '',
+          optimizedCode: cached.optimizedCode || '',
+          interviewQuestions: cached.interviewQuestions || [],
+          learningResources: cached.learningResources || [],
+          category: cached.category || '',
+          subCategory: cached.subCategory || '',
+          isDSA: cached.isDSA ?? false,
+          hasSyntaxErrors: Boolean(cached.hasSyntaxErrors) || (cached.issues || []).some((i) => i.severity === 'Critical'),
+          errorLines: cached.errorLines || extractErrorLinesFromIssues(cached.issues),
+          timeComplexity: cached.complexity?.timeComplexity || cached.timeComplexity || '',
+          spaceComplexity: cached.complexity?.spaceComplexity || cached.spaceComplexity || '',
+          algorithm: cached.complexity?.algorithm || cached.algorithm || '',
+          approach: cached.approach || '',
+          overallScore: cached.overallScore || 0,
+          ratings: cached.ratings || { performance: 0, readability: 0, maintainability: 0, security: 0, scalability: 0 },
+        });
+      }
     }
 
-    const fallbackResult = buildFallbackAnalysis(normalizedCode, String(language || 'javascript').trim().toLowerCase());
+    // Run deterministic static syntax pre-check
+    const staticIssues = detectStaticSyntaxErrors(normalizedCode, language);
 
     if (!process.env.GROQ_API_KEY) {
       markRequest(req.user.id);
       const localResult = {
-        ...fallbackResult,
+        ...buildFallbackAnalysis(normalizedCode, language),
         source: 'local',
         groqEnabled: false,
         groqError: 'AI service is temporarily unavailable. Showing cached/local analysis instead.',
@@ -779,152 +807,143 @@ export const analyzeSnippetCode = async (req, res) => {
       return res.json(localResult);
     }
 
-    const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a strict code analysis engine. Return JSON only and nothing else. Do not include markdown fences, comments, or any extra text outside the JSON object.',
-          },
-          {
-            role: 'user',
-            content: promptForGroq(normalizedCode, language),
-          },
-        ],
-        temperature: 0.1,
-        max_tokens: 2048,
-        top_p: 0.8,
-      }),
-    });
-
-    if (!response.ok) {
+    try {
       markRequest(req.user.id);
-      const text = await response.text();
-      console.warn('Groq analysis unavailable, using fallback:', text.slice(0, 200));
-      const localResult = {
-        ...fallbackResult,
+      const { parsed } = await callGroqAPI([
+        {
+          role: 'system',
+          content: 'You are a strict compiler diagnostics and code analysis engine. Return JSON only and nothing else. Output strictly valid JSON without markdown wrapping.',
+        },
+        {
+          role: 'user',
+          content: promptForGroq(normalizedCode, language),
+        },
+      ]);
+
+      const rawIssues = Array.isArray(parsed.issues) ? parsed.issues : [];
+      // Merge AI issues with any critical static issues detected
+      const combinedIssuesMap = new Map();
+      staticIssues.forEach((iss) => {
+        combinedIssuesMap.set(`${iss.line}-${iss.title}`, iss);
+      });
+      rawIssues.forEach((iss) => {
+        const line = Number.isFinite(Number(iss.line)) && Number(iss.line) > 0 ? Number(iss.line) : null;
+        const column = Number.isFinite(Number(iss.column)) && Number(iss.column) > 0 ? Number(iss.column) : null;
+        const formatted = {
+          title: iss.title || 'Code Issue',
+          severity: ['Low', 'Medium', 'High', 'Critical'].includes(iss.severity) ? iss.severity : 'Medium',
+          line,
+          column,
+          description: iss.description || '',
+          fix: iss.fix || '',
+        };
+        combinedIssuesMap.set(`${line}-${formatted.title}`, formatted);
+      });
+
+      const formattedIssues = Array.from(combinedIssuesMap.values());
+      const hasSyntaxErrors = Boolean(parsed.hasSyntaxErrors) || formattedIssues.some((i) => i.severity === 'Critical');
+      const issueTexts = issuesToText(formattedIssues);
+      const errorLineNumbers = extractErrorLinesFromIssues(formattedIssues);
+
+      const fallbackResult = buildFallbackAnalysis(normalizedCode, language);
+
+      const result = {
+        source: 'groq',
+        groqEnabled: true,
+        groqError: '',
+        language,
+        category: parsed.category || fallbackResult.category || 'Other',
+        subCategory: parsed.subCategory || fallbackResult.subCategory || '',
+        isDSA: parsed.isDSA ?? fallbackResult.isDSA ?? false,
+        hasSyntaxErrors,
+        errorLines: errorLineNumbers,
+        overallScore: Number.isFinite(Number(parsed.overallScore))
+          ? Number(parsed.overallScore)
+          : (hasSyntaxErrors ? 3 : fallbackResult.overallScore),
+        ratings: parsed.ratings || fallbackResult.ratings,
+        algorithm: parsed.algorithm || fallbackResult.algorithm || '',
+        approach: parsed.approach || fallbackResult.approach || '',
+        timeComplexity: parsed.timeComplexity || fallbackResult.timeComplexity || '',
+        spaceComplexity: parsed.spaceComplexity || fallbackResult.spaceComplexity || '',
+        dataStructureRecommendations: parsed.dataStructureRecommendations || '',
+        explanation: parsed.explanation || fallbackResult.explanation,
+        summary: parsed.summary || fallbackResult.summary || '',
+        issues: formattedIssues,
+        analysisErrors: issueTexts,
+        errors: issueTexts,
+        strengths: Array.isArray(parsed.strengths) ? parsed.strengths : fallbackResult.strengths,
+        suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : fallbackResult.suggestions,
+        securityIssues: Array.isArray(parsed.securityIssues) ? parsed.securityIssues : fallbackResult.securityIssues,
+        performanceImprovements: Array.isArray(parsed.performanceImprovements) ? parsed.performanceImprovements : fallbackResult.performanceImprovements,
+        futureSuggestions: Array.isArray(parsed.futureSuggestions) ? parsed.futureSuggestions : fallbackResult.futureSuggestions,
+        designPatterns: Array.isArray(parsed.designPatterns) ? parsed.designPatterns : fallbackResult.designPatterns,
+        correctedCode: parsed.correctedCode || '',
+        optimizedCode: parsed.optimizedCode || '',
+        interviewQuestions: Array.isArray(parsed.interviewQuestions) ? parsed.interviewQuestions : fallbackResult.interviewQuestions,
+        learningResources: Array.isArray(parsed.learningResources) ? parsed.learningResources : fallbackResult.learningResources,
+        complexity: {
+          algorithm: parsed.algorithm || fallbackResult.algorithm,
+          timeComplexity: parsed.timeComplexity || fallbackResult.timeComplexity,
+          spaceComplexity: parsed.spaceComplexity || fallbackResult.spaceComplexity,
+        },
+      };
+
+      if (activeSnippetId && mongoose.connection?.readyState === 1) {
+        await Analysis.findOneAndUpdate(
+          {
+            snippetId: activeSnippetId,
+            versionNumber: normalizedVersion,
+          },
+          {
+            $set: {
+              category: result.category,
+              subCategory: result.subCategory,
+              isDSA: result.isDSA,
+              hasSyntaxErrors: result.hasSyntaxErrors,
+              errorLines: result.errorLines,
+              overallScore: result.overallScore,
+              ratings: result.ratings,
+              algorithm: result.algorithm,
+              approach: result.approach,
+              complexity: result.complexity,
+              dataStructureRecommendations: result.dataStructureRecommendations,
+              explanation: result.explanation,
+              summary: result.summary,
+              issues: result.issues,
+              analysisErrors: result.analysisErrors,
+              strengths: result.strengths,
+              suggestions: result.suggestions,
+              securityIssues: result.securityIssues,
+              performanceImprovements: result.performanceImprovements,
+              futureSuggestions: result.futureSuggestions,
+              designPatterns: result.designPatterns,
+              correctedCode: result.correctedCode,
+              optimizedCode: result.optimizedCode,
+              interviewQuestions: result.interviewQuestions,
+              learningResources: result.learningResources,
+              source: result.source,
+              groqEnabled: true,
+              groqError: '',
+            },
+          },
+          { upsert: true, new: true }
+        );
+      }
+
+      return res.json(result);
+    } catch (error) {
+      console.warn('Groq analysis error, using static fallback:', error.message);
+      return res.json({
+        ...buildFallbackAnalysis(normalizedCode, language),
         source: 'local',
         groqEnabled: true,
-        groqError: 'AI service is temporarily unavailable. Showing cached/local analysis instead.',
-      };
-      return res.json(localResult);
+        groqError: 'AI service is temporarily unavailable. Showing local syntax analysis instead.',
+      });
     }
-
-    const payload = await response.json();
-    const text = payload?.choices?.[0]?.message?.content || '';
-    const parsed = extractGroqJson(text) || {};
-
-    const rawIssues = Array.isArray(parsed.issues) ? parsed.issues : [];
-    const formattedIssues = rawIssues.map((iss) => ({
-      title: iss.title || '',
-      severity: ['Low', 'Medium', 'High', 'Critical'].includes(iss.severity) ? iss.severity : 'Medium',
-      line: Number.isFinite(Number(iss.line)) && Number(iss.line) > 0 ? Number(iss.line) : null,
-      column: Number.isFinite(Number(iss.column)) && Number(iss.column) > 0 ? Number(iss.column) : null,
-      description: iss.description || '',
-      fix: iss.fix || '',
-    }));
-
-    const issueTexts = issuesToText(formattedIssues);
-    const errorLineNumbers = extractErrorLinesFromIssues(formattedIssues);
-
-    const result = {
-      source: 'groq',
-      groqEnabled: true,
-      groqError: '',
-      language,
-      category: parsed.category || fallbackResult.category || 'Other',
-      subCategory: parsed.subCategory || fallbackResult.subCategory || '',
-      isDSA: parsed.isDSA ?? fallbackResult.isDSA ?? false,
-      hasSyntaxErrors: parsed.hasSyntaxErrors ?? (errorLineNumbers.length > 0),
-      errorLines: errorLineNumbers,
-      overallScore: Number.isFinite(Number(parsed.overallScore)) ? Number(parsed.overallScore) : fallbackResult.overallScore,
-      ratings: parsed.ratings || fallbackResult.ratings,
-      algorithm: parsed.algorithm || fallbackResult.algorithm || '',
-      approach: parsed.approach || fallbackResult.approach || '',
-      timeComplexity: parsed.timeComplexity || fallbackResult.timeComplexity || '',
-      spaceComplexity: parsed.spaceComplexity || fallbackResult.spaceComplexity || '',
-      dataStructureRecommendations: parsed.dataStructureRecommendations || '',
-      explanation: parsed.explanation || fallbackResult.explanation,
-      summary: parsed.summary || fallbackResult.summary || '',
-      issues: formattedIssues.length > 0 ? formattedIssues : fallbackResult.issues,
-      analysisErrors: issueTexts.length > 0 ? issueTexts : fallbackResult.analysisErrors,
-      errors: issueTexts.length > 0 ? issueTexts : fallbackResult.analysisErrors,
-      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : fallbackResult.strengths,
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : fallbackResult.suggestions,
-      securityIssues: Array.isArray(parsed.securityIssues) ? parsed.securityIssues : fallbackResult.securityIssues,
-      performanceImprovements: Array.isArray(parsed.performanceImprovements) ? parsed.performanceImprovements : fallbackResult.performanceImprovements,
-      futureSuggestions: Array.isArray(parsed.futureSuggestions) ? parsed.futureSuggestions : fallbackResult.futureSuggestions,
-      designPatterns: Array.isArray(parsed.designPatterns) ? parsed.designPatterns : fallbackResult.designPatterns,
-      correctedCode: parsed.correctedCode || '',
-      optimizedCode: parsed.optimizedCode || '',
-      interviewQuestions: Array.isArray(parsed.interviewQuestions) ? parsed.interviewQuestions : fallbackResult.interviewQuestions,
-      learningResources: Array.isArray(parsed.learningResources) ? parsed.learningResources : fallbackResult.learningResources,
-      complexity: {
-        algorithm: parsed.algorithm || fallbackResult.algorithm,
-        timeComplexity: parsed.timeComplexity || fallbackResult.timeComplexity,
-        spaceComplexity: parsed.spaceComplexity || fallbackResult.spaceComplexity,
-      },
-    };
-
-    if (activeSnippetId) {
-      await Analysis.findOneAndUpdate(
-        {
-          snippetId: activeSnippetId,
-          versionNumber: normalizedVersion,
-        },
-        {
-          $set: {
-            category: result.category,
-            subCategory: result.subCategory,
-            isDSA: result.isDSA,
-            hasSyntaxErrors: result.hasSyntaxErrors,
-            errorLines: result.errorLines,
-            overallScore: result.overallScore,
-            ratings: result.ratings,
-            algorithm: result.algorithm,
-            approach: result.approach,
-            complexity: result.complexity,
-            dataStructureRecommendations: result.dataStructureRecommendations,
-            explanation: result.explanation,
-            summary: result.summary,
-            issues: result.issues,
-            analysisErrors: result.analysisErrors,
-            strengths: result.strengths,
-            suggestions: result.suggestions,
-            securityIssues: result.securityIssues,
-            performanceImprovements: result.performanceImprovements,
-            futureSuggestions: result.futureSuggestions,
-            designPatterns: result.designPatterns,
-            correctedCode: result.correctedCode,
-            optimizedCode: result.optimizedCode,
-            interviewQuestions: result.interviewQuestions,
-            learningResources: result.learningResources,
-            source: result.source,
-            groqEnabled: true,
-            groqError: '',
-          },
-        },
-        { upsert: true, new: true }
-      );
-    }
-
-    markRequest(req.user.id);
-    return res.json(result);
   } catch (error) {
-    console.warn('Analysis error, using fallback:', error.message);
-    return res.json({
-      ...buildFallbackAnalysis(req.body?.code || '', req.body?.language || 'javascript'),
-      source: 'local',
-      groqEnabled: true,
-      groqError: 'AI service is temporarily unavailable. Showing cached/local analysis instead.',
-      errors: [],
+    console.error('Fatal analysis error:', error.message);
+    return res.status(500).json({
+      message: 'Failed to process code analysis: ' + error.message,
     });
   }
 };
