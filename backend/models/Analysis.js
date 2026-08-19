@@ -37,6 +37,11 @@ const analysisSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    domain: {
+      type: String,
+      enum: ['dsa', 'sql'],
+      default: 'dsa',
+    },
     hasSyntaxErrors: {
       type: Boolean,
       default: false,
@@ -68,6 +73,10 @@ const analysisSchema = new mongoose.Schema(
       algorithm: { type: String, default: '' },
       timeComplexity: { type: String, default: '' },
       spaceComplexity: { type: String, default: '' },
+    },
+    targetComplexityMet: {
+      type: Boolean,
+      default: null,
     },
     dataStructureRecommendations: {
       type: String,
@@ -120,6 +129,29 @@ const analysisSchema = new mongoose.Schema(
     optimizedCode: {
       type: String,
       default: '',
+    },
+    // Polyglot Rosetta solutions (Java, Python, C++, JavaScript)
+    polyglotTranslations: {
+      java: { type: String, default: '' },
+      python: { type: String, default: '' },
+      cpp: { type: String, default: '' },
+      javascript: { type: String, default: '' },
+    },
+    // SQL Specific query breakdown and execution pipeline
+    sqlAnalysis: {
+      clauseOrder: {
+        type: [
+          {
+            clause: String,
+            order: Number,
+            description: String,
+          },
+        ],
+        default: [],
+      },
+      antiPatterns: { type: [String], default: [] },
+      optimizations: { type: [String], default: [] },
+      indexSuggestions: { type: [String], default: [] },
     },
     interviewQuestions: {
       type: [String],

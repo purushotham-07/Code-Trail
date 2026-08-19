@@ -1,15 +1,19 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../store/AuthContext.jsx';
 import GoogleLoginButton from './GoogleLoginButton.jsx';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const timeoutRef = useRef(null);
+
+  const searchParams = new URLSearchParams(location.search);
+  const currentDomain = searchParams.get('domain');
 
   const openMenu = () => {
     clearTimeout(timeoutRef.current);
@@ -29,20 +33,65 @@ export default function Navbar() {
   return (
     <nav className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-white hover:opacity-90 transition-opacity">
-          <img src="/logo.svg" alt="CodeTrail Logo" className="h-7 w-7 rounded-md object-contain" />
-          <span>CodeTrail</span>
-        </Link>
+        <div className="flex items-center gap-6">
+          <Link to="/" className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-white hover:opacity-90 transition-opacity">
+            <img src="/logo.svg" alt="CodeTrail Logo" className="h-7 w-7 rounded-md object-contain" />
+            <div className="flex items-baseline gap-1.5">
+              <span>CodeTrail</span>
+              <span className="rounded bg-blue-600/20 px-1.5 py-0.5 text-[10px] font-semibold text-blue-400 border border-blue-500/30">
+                DSA · SQL
+              </span>
+            </div>
+          </Link>
+
+          <div className="hidden items-center gap-1 sm:flex">
+            <Link
+              to="/"
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                !currentDomain && location.pathname === '/'
+                  ? 'bg-slate-800 text-white'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-white'
+              }`}
+            >
+              All Problems
+            </Link>
+            <Link
+              to="/?domain=dsa"
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                currentDomain === 'dsa'
+                  ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 font-semibold'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-blue-300'
+              }`}
+            >
+              <span>🧠</span> DSA Arena
+            </Link>
+            <Link
+              to="/?domain=sql"
+              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                currentDomain === 'sql'
+                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 font-semibold'
+                  : 'text-slate-400 hover:bg-slate-800/60 hover:text-emerald-300'
+              }`}
+            >
+              <span>🗄️</span> SQL Studio
+            </Link>
+          </div>
+        </div>
 
         <div className="hidden items-center gap-3 md:flex">
-          <Link to="/" className="rounded-md px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-800/60 hover:text-white">
-            Dashboard
-          </Link>
           {user && (
-            <Link to="/create" className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500">
-              New Snippet
+            <Link
+              to="/create"
+              className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-500 shadow-sm"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" />
+                <line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+              <span>New Problem</span>
             </Link>
           )}
+
           {user ? (
             <div className="relative" onMouseEnter={openMenu} onMouseLeave={closeMenu}>
               <button
@@ -51,17 +100,17 @@ export default function Navbar() {
                 aria-label="User menu"
               >
                 <img
-  src={user?.avatar}
-  alt={user?.name}
-  referrerPolicy="no-referrer"
-  loading="lazy"
-  className="h-8 w-8 rounded-full object-cover border border-slate-700"
-  onError={(e) => {
-    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-      user?.name || "User"
-    )}&background=2563eb&color=ffffff`;
-  }}
-/>
+                  src={user?.avatar}
+                  alt={user?.name}
+                  referrerPolicy="no-referrer"
+                  loading="lazy"
+                  className="h-8 w-8 rounded-full object-cover border border-slate-700"
+                  onError={(e) => {
+                    e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                      user?.name || 'User'
+                    )}&background=2563eb&color=ffffff`;
+                  }}
+                />
               </button>
               <AnimatePresence>
                 {menuOpen && (
@@ -81,7 +130,7 @@ export default function Navbar() {
                       onClick={() => setMenuOpen(false)}
                       className="block px-4 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-800"
                     >
-                      Profile
+                      Profile & My Solutions
                     </Link>
                     <button
                       type="button"
@@ -122,17 +171,23 @@ export default function Navbar() {
           >
             <div className="flex flex-col gap-2">
               <Link to="/" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">
-                Dashboard
+                All Problems
+              </Link>
+              <Link to="/?domain=dsa" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm text-blue-400 hover:bg-slate-800">
+                🧠 DSA Arena (Java · Python · C++ · JS)
+              </Link>
+              <Link to="/?domain=sql" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm text-emerald-400 hover:bg-slate-800">
+                🗄️ SQL Studio
               </Link>
               {user && (
-                <Link to="/create" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">
-                  New Snippet
+                <Link to="/create" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500">
+                  + New Problem
                 </Link>
               )}
               {user ? (
                 <>
                   <Link to="/profile" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">
-                    Profile
+                    Profile & My Solutions
                   </Link>
                   <button type="button" onClick={handleLogout} className="rounded-md px-3 py-2 text-left text-sm text-red-400 hover:bg-slate-800">
                     Logout

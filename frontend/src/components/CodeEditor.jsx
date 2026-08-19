@@ -6,6 +6,7 @@ import { javascript } from '@codemirror/lang-javascript';
 import { json } from '@codemirror/lang-json';
 import { markdown } from '@codemirror/lang-markdown';
 import { python } from '@codemirror/lang-python';
+import { sql } from '@codemirror/lang-sql';
 import { Decoration, EditorView } from '@codemirror/view';
 import { RangeSet, StateEffect, StateField } from '@codemirror/state';
 import CodeMirror from '@uiw/react-codemirror';
@@ -26,12 +27,12 @@ const languageExtensions = {
   md: markdown(),
   html: html(),
   css: css(),
-  sql: javascript(),
+  sql: sql(),
   c: cpp(),
   'c++': cpp(),
   cpp: cpp(),
   java: java(),
-  dsa: javascript(),
+  dsa: python(),
 };
 
 // State effect + field used to mark error lines for highlighting.
