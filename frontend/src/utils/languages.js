@@ -343,11 +343,56 @@ export function detectTopicAndTags(text = '', domain = 'dsa') {
 export function generateTopicHints(topic = 'General', domain = 'dsa') {
   const top = String(topic || 'General').trim();
   if (domain === 'sql') {
-    return [
-      `Hint 1 (Clause Execution): Determine whether row-level filtering (WHERE) or group-level aggregation (GROUP BY / HAVING / WINDOW) should execute first for ${top}.`,
-      `Hint 2 (Query Architecture): Utilize CTEs (WITH clause) or Window Functions (OVER (PARTITION BY ... ORDER BY ...)) to avoid correlated subquery overhead.`,
-      `Hint 3 (Optimization & Edge Cases): Account for NULL values in joins, tie-breaking in RANK() vs DENSE_RANK(), and index usage on foreign key columns.`,
-    ];
+    switch (top) {
+      case 'Window Functions':
+        return [
+          'Hint 1 (Query Strategy): Use DENSE_RANK() or ROW_NUMBER() over an ORDER BY clause (e.g. DENSE_RANK() OVER (ORDER BY salary DESC)) to assign ranking metrics across rows.',
+          'Hint 2 (Query Architecture): Window functions cannot be filtered directly in a WHERE clause. Wrap the window query inside a subquery or Common Table Expression (WITH CTE AS ...).',
+          'Hint 3 (Edge Cases & Ties): If identical values exist (e.g. two employees with the same salary), decide whether they share the rank (DENSE_RANK) or get distinct sequential numbers (ROW_NUMBER).',
+        ];
+      case 'CTEs & Recursive Queries':
+        return [
+          'Hint 1 (Query Strategy): For Nth Highest Salary or Top-N filtering, either declare a CTE with DENSE_RANK() or decrement N (SET N = N - 1;) to use LIMIT 1 OFFSET N.',
+          'Hint 2 (Function Syntax): When writing a MySQL/PostgreSQL function (CREATE FUNCTION ... BEGIN ... RETURN ( ... ); END), ensure the scalar query inside RETURN is wrapped in parentheses.',
+          'Hint 3 (Edge Cases & NULL Handling): If fewer than N records exist, a subquery SELECT (SELECT DISTINCT salary ... LIMIT 1 OFFSET N) naturally evaluates to NULL instead of an empty set.',
+        ];
+      case 'Multi-Table Joins':
+        return [
+          'Hint 1 (Query Strategy): Determine if rows from the primary table must be retained even when no match exists (use LEFT JOIN) or if only matching pairs are required (use INNER JOIN).',
+          'Hint 2 (Join Condition): Always specify explicit join predicates (ON table_a.id = table_b.foreign_id) to avoid Cartesian products.',
+          'Hint 3 (Edge Cases & NULLs): When looking for records that do NOT exist in the secondary table, use LEFT JOIN ... WHERE table_b.id IS NULL.',
+        ];
+      case 'Aggregations & Grouping':
+        return [
+          'Hint 1 (Query Strategy): Remember the execution lifecycle: WHERE filters rows before aggregation; GROUP BY forms groups; HAVING filters aggregated results.',
+          'Hint 2 (Group Invariant): Every non-aggregated column selected in the SELECT clause must appear in the GROUP BY clause.',
+          'Hint 3 (Edge Cases & Distinct): Be careful with COUNT(column) vs COUNT(*). Use COUNT(DISTINCT column) when uniqueness is required across groups.',
+        ];
+      case 'Ranking & Partitioning':
+        return [
+          'Hint 1 (Query Strategy): Choose the exact ranking function: ROW_NUMBER() (unique 1,2,3), RANK() (gap on ties 1,2,2,4), or DENSE_RANK() (continuous on ties 1,2,2,3).',
+          'Hint 2 (Partition Frame): When ranking within subgroups (e.g. highest salary per department), add PARTITION BY department_id to your OVER clause.',
+          'Hint 3 (Edge Cases & Ties): Add secondary sort columns in ORDER BY to ensure deterministic tie-breaking.',
+        ];
+      case 'Date & Time Manipulation':
+        return [
+          'Hint 1 (Query Strategy): Use dialect date functions (DATEDIFF(d1, d2), DATE_ADD, or d1 - INTERVAL 1 DAY) to calculate time deltas.',
+          'Hint 2 (Self-Joins): For consecutive date tracking (e.g. rising temperatures), join the table with itself ON DATEDIFF(t1.recordDate, t2.recordDate) = 1.',
+          'Hint 3 (Edge Cases): Account for leap years, end-of-month rollovers, and dates that might not have consecutive day entries.',
+        ];
+      case 'Subqueries & Correlated':
+        return [
+          'Hint 1 (Query Strategy): Use WHERE EXISTS (SELECT 1 FROM ... WHERE ...) for fast existence checks that terminate on the first match.',
+          'Hint 2 (Scalar Subqueries): Ensure scalar subqueries used in expressions evaluate to at most one row and one column.',
+          'Hint 3 (Optimization): Avoid deeply nested correlated subqueries in large tables by rewriting them as JOINs or CTEs with indexes.',
+        ];
+      default:
+        return [
+          'Hint 1 (Clause Execution): Determine whether row-level filtering (WHERE) or group-level aggregation (GROUP BY / HAVING / WINDOW) should execute first.',
+          'Hint 2 (Query Architecture): Utilize CTEs (WITH clause) or Window Functions to avoid repetitive subquery scans.',
+          'Hint 3 (Optimization & NULLs): Test edge cases: empty tables, single-row inputs, duplicate values, and NULL handling.',
+        ];
+    }
   }
 
   switch (top) {

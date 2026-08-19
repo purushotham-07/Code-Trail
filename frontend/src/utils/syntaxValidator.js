@@ -306,50 +306,88 @@ export function detectStaticSyntaxErrors(code = '', language = 'python') {
 
   // 5. SQL Specific Rules
   if (lang === 'sql') {
+    const sqlTypos = [
+      { pattern: /\bLIMI\b/i, typo: 'LIMI', correct: 'LIMIT' },
+      { pattern: /\bLMIT\b/i, typo: 'LMIT', correct: 'LIMIT' },
+      { pattern: /\bLIMT\b/i, typo: 'LIMT', correct: 'LIMIT' },
+      { pattern: /\bOFFST\b/i, typo: 'OFFST', correct: 'OFFSET' },
+      { pattern: /\bOFSET\b/i, typo: 'OFSET', correct: 'OFFSET' },
+      { pattern: /\bSELETC\b/i, typo: 'SELETC', correct: 'SELECT' },
+      { pattern: /\bSELET\b/i, typo: 'SELET', correct: 'SELECT' },
+      { pattern: /\bSELCT\b/i, typo: 'SELCT', correct: 'SELECT' },
+      { pattern: /\bSLECT\b/i, typo: 'SLECT', correct: 'SELECT' },
+      { pattern: /\bWHER\b/i, typo: 'WHER', correct: 'WHERE' },
+      { pattern: /\bWERE\b/i, typo: 'WERE', correct: 'WHERE' },
+      { pattern: /\bWHRE\b/i, typo: 'WHRE', correct: 'WHERE' },
+      { pattern: /\bFROMM\b/i, typo: 'FROMM', correct: 'FROM' },
+      { pattern: /\bFRM\b/i, typo: 'FRM', correct: 'FROM' },
+      { pattern: /\bINER\s+JOIN\b/i, typo: 'INER JOIN', correct: 'INNER JOIN' },
+      { pattern: /\bINNR\s+JOIN\b/i, typo: 'INNR JOIN', correct: 'INNER JOIN' },
+      { pattern: /\bLEFTT\s+JOIN\b/i, typo: 'LEFTT JOIN', correct: 'LEFT JOIN' },
+      { pattern: /\bRIGTH\s+JOIN\b/i, typo: 'RIGTH JOIN', correct: 'RIGHT JOIN' },
+      { pattern: /\bGROPU\s+BY\b/i, typo: 'GROPU BY', correct: 'GROUP BY' },
+      { pattern: /\bGROUPBY\b/i, typo: 'GROUPBY', correct: 'GROUP BY' },
+      { pattern: /\bGROP\s+BY\b/i, typo: 'GROP BY', correct: 'GROUP BY' },
+      { pattern: /\bORDRE\s+BY\b/i, typo: 'ORDRE BY', correct: 'ORDER BY' },
+      { pattern: /\bORDERBY\b/i, typo: 'ORDERBY', correct: 'ORDER BY' },
+      { pattern: /\bORDR\s+BY\b/i, typo: 'ORDR BY', correct: 'ORDER BY' },
+      { pattern: /\bORER\s+BY\b/i, typo: 'ORER BY', correct: 'ORDER BY' },
+      { pattern: /\bHAVNG\b/i, typo: 'HAVNG', correct: 'HAVING' },
+      { pattern: /\bHAVIN\b/i, typo: 'HAVIN', correct: 'HAVING' },
+      { pattern: /\bDISTINC\b/i, typo: 'DISTINC', correct: 'DISTINCT' },
+      { pattern: /\bDISTINCTT\b/i, typo: 'DISTINCTT', correct: 'DISTINCT' },
+      { pattern: /\bDITINCT\b/i, typo: 'DITINCT', correct: 'DISTINCT' },
+      { pattern: /\bPARTITON\s+BY\b/i, typo: 'PARTITON BY', correct: 'PARTITION BY' },
+      { pattern: /\bPARTION\s+BY\b/i, typo: 'PARTION BY', correct: 'PARTITION BY' },
+      { pattern: /\bDENSE_RAN\b/i, typo: 'DENSE_RAN', correct: 'DENSE_RANK' },
+      { pattern: /\bDENSE_RANKK\b/i, typo: 'DENSE_RANKK', correct: 'DENSE_RANK' },
+      { pattern: /\bROW_NUMBR\b/i, typo: 'ROW_NUMBR', correct: 'ROW_NUMBER' },
+      { pattern: /\bROW_NUMER\b/i, typo: 'ROW_NUMER', correct: 'ROW_NUMBER' },
+      { pattern: /\bCREAT\b/i, typo: 'CREAT', correct: 'CREATE' },
+      { pattern: /\bCRATE\b/i, typo: 'CRATE', correct: 'CREATE' },
+      { pattern: /\bFUNTION\b/i, typo: 'FUNTION', correct: 'FUNCTION' },
+      { pattern: /\bFUNCITON\b/i, typo: 'FUNCITON', correct: 'FUNCTION' },
+      { pattern: /\bFUCTION\b/i, typo: 'FUCTION', correct: 'FUNCTION' },
+      { pattern: /\bRETURS\b/i, typo: 'RETURS', correct: 'RETURNS' },
+      { pattern: /\bRETUNS\b/i, typo: 'RETUNS', correct: 'RETURNS' },
+      { pattern: /\bRETUR\b/i, typo: 'RETUR', correct: 'RETURN' },
+      { pattern: /\bBEIGN\b/i, typo: 'BEIGN', correct: 'BEGIN' },
+      { pattern: /\bBGIN\b/i, typo: 'BGIN', correct: 'BEGIN' },
+      { pattern: /\bPROCEDUR\b/i, typo: 'PROCEDUR', correct: 'PROCEDURE' },
+      { pattern: /\bEXITS\b/i, typo: 'EXITS', correct: 'EXISTS' },
+      { pattern: /\bUNOIN\b/i, typo: 'UNOIN', correct: 'UNION' },
+    ];
+
     rawLines.forEach((lineText, lineIdx) => {
       const lineNum = lineIdx + 1;
       const trimmed = lineText.trim();
       if (!trimmed || trimmed.startsWith('--') || trimmed.startsWith('/*')) return;
 
-      if (/\bWHER\b/i.test(lineText)) {
-        issues.push({
-          title: "SQL keyword typo 'WHER'",
-          severity: 'Critical',
-          line: lineNum,
-          column: lineText.search(/\bWHER\b/i) + 1,
-          description: "Keyword 'WHER' is misspelled.",
-          fix: "Replace 'WHER' with 'WHERE'.",
-        });
-      }
-      if (/\bSELETC\b/i.test(lineText) || /\bSELET\b/i.test(lineText)) {
-        issues.push({
-          title: "SQL keyword typo in 'SELECT'",
-          severity: 'Critical',
-          line: lineNum,
-          column: 1,
-          description: "Keyword 'SELECT' is misspelled.",
-          fix: "Replace with 'SELECT'.",
-        });
-      }
-      if (/\bINER\s+JOIN\b/i.test(lineText)) {
-        issues.push({
-          title: "SQL keyword typo 'INER JOIN'",
-          severity: 'Critical',
-          line: lineNum,
-          column: lineText.search(/\bINER\s+JOIN\b/i) + 1,
-          description: "Keyword 'INER JOIN' is misspelled.",
-          fix: "Replace 'INER JOIN' with 'INNER JOIN'.",
-        });
-      }
-      if (/,\s*FROM\b/i.test(lineText)) {
-        issues.push({
-          title: 'Trailing comma before FROM clause',
-          severity: 'Critical',
-          line: lineNum,
-          column: lineText.search(/,\s*FROM\b/i) + 1,
-          description: "SQL syntax error: unexpected comma immediately before 'FROM'.",
-          fix: "Remove the trailing comma before 'FROM'.",
-        });
+      sqlTypos.forEach(({ pattern, typo, correct }) => {
+        if (pattern.test(lineText)) {
+          issues.push({
+            title: `SQL keyword typo '${typo}'`,
+            severity: 'Critical',
+            line: lineNum,
+            column: lineText.search(pattern) + 1,
+            description: `Keyword '${typo}' is misspelled.`,
+            fix: `Replace '${typo}' with '${correct}'.`,
+          });
+        }
+      });
+
+      if (/,\s*(FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT)\b/i.test(lineText)) {
+        const match = lineText.match(/,\s*(FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT)\b/i);
+        if (match) {
+          issues.push({
+            title: `Trailing comma before ${match[1].toUpperCase()} clause`,
+            severity: 'Critical',
+            line: lineNum,
+            column: lineText.indexOf(',') + 1,
+            description: `Unexpected comma immediately before '${match[1]}'.`,
+            fix: `Remove the trailing comma before '${match[1]}'.`,
+          });
+        }
       }
     });
   }

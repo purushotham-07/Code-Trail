@@ -560,7 +560,7 @@ export default function SnippetPage() {
               </span>
             )}
 
-            {(analysis?.isSolved || (analysis?.targetComplexityMet && !analysis?.hasSyntaxErrors)) && (
+            {((isSql ? (!hasErrors && !analysis?.hasSyntaxErrors) : (analysis?.isSolved || (analysis?.targetComplexityMet && !analysis?.hasSyntaxErrors))) && !hasErrors && (analysis || staticSyntaxIssues.length === 0)) && (
               <span className="rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold flex items-center gap-1">
                 <span>✓</span>
                 <span>Solved</span>
@@ -839,7 +839,7 @@ export default function SnippetPage() {
                 {/* Title & Target Complexity */}
                 <div>
                   <h2 className="text-lg font-bold text-slate-900 dark:text-white">{snippet.title}</h2>
-                  {(snippet.targetTimeComplexity || snippet.targetSpaceComplexity) && (
+                  {(snippet.targetTimeComplexity || snippet.targetSpaceComplexity) && !isSql && (
                     <div className="mt-2 flex flex-wrap items-center gap-2 font-mono">
                       <span className="text-slate-500 font-sans">Target Complexity:</span>
                       {snippet.targetTimeComplexity && (
@@ -863,10 +863,10 @@ export default function SnippetPage() {
                   </div>
                 </div>
 
-                {/* SQL Schema Definition (if SQL) */}
+                {/* SQL Schema Definition (for SQL snippets) */}
                 {isSql && snippet.sqlSchema && (
                   <div className="space-y-2">
-                    <h3 className="font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider text-[11px]">
+                    <h3 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
                       Database Tables & Schema
                     </h3>
                     <pre className="overflow-x-auto rounded bg-slate-50 dark:bg-[#1e1e1e] p-3 font-mono text-[11.5px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-[#333333] leading-relaxed">
@@ -908,7 +908,10 @@ export default function SnippetPage() {
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-slate-800 dark:text-slate-200">
-                            Hint {i + 1} {i === 0 ? '(Intuition)' : i === 1 ? '(Data Structure)' : '(Algorithm & Edge Cases)'}
+                            Hint {i + 1} {isSql
+                              ? (i === 0 ? '(Query Strategy & Clauses)' : i === 1 ? '(Table Joins & Schema Nuance)' : '(Edge Cases & NULL Handling)')
+                              : (i === 0 ? '(Intuition)' : i === 1 ? '(Data Structure)' : '(Algorithm & Edge Cases)')
+                            }
                           </span>
                           <button
                             type="button"
@@ -942,8 +945,44 @@ export default function SnippetPage() {
               <div className="space-y-4 text-xs">
                 {analysis ? (
                   <>
-                    {/* Complexity Solved / Sub-optimal Status Alert */}
-                    {(analysis.isSolved || (analysis.targetComplexityMet && !analysis.hasSyntaxErrors)) ? (
+                    {/* Status Alert Banner */}
+                    {isSql ? (
+                      !hasErrors ? (
+                        <div className="rounded-lg border border-emerald-300 dark:border-emerald-800/80 bg-emerald-50 dark:bg-emerald-950/40 p-3.5 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs">
+                              ✓
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-emerald-800 dark:text-emerald-300 text-xs">Query Validated • Solved</h4>
+                              <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                                SQL query syntax and structure validated successfully without syntax errors.
+                              </p>
+                            </div>
+                          </div>
+                          <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase shrink-0">
+                            Valid
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="rounded-lg border border-rose-300 dark:border-rose-800/80 bg-rose-50 dark:bg-rose-950/40 p-3.5 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-600 text-white font-bold text-xs">
+                              !
+                            </div>
+                            <div>
+                              <h4 className="font-bold text-rose-800 dark:text-rose-300 text-xs">Syntax Errors Detected</h4>
+                              <p className="text-[11px] text-rose-700 dark:text-rose-400">
+                                Please fix the SQL syntax errors highlighted below to complete the solution.
+                              </p>
+                            </div>
+                          </div>
+                          <span className="rounded bg-rose-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase shrink-0">
+                            Error
+                          </span>
+                        </div>
+                      )
+                    ) : (analysis.isSolved || (analysis.targetComplexityMet && !analysis.hasSyntaxErrors)) && !hasErrors ? (
                       <div className="rounded-lg border border-emerald-300 dark:border-emerald-800/80 bg-emerald-50 dark:bg-emerald-950/40 p-3.5 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2.5">
                           <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs">
@@ -979,28 +1018,30 @@ export default function SnippetPage() {
                       </div>
                     )}
 
-                    {/* Current Version Complexity Card */}
-                    <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-3">
-                      <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
-                        Current Version Complexity
-                      </h4>
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div className="rounded border border-slate-200 dark:border-[#3a3a3a] bg-white dark:bg-[#262626] p-3 space-y-1">
-                          <span className="text-[10px] font-semibold text-slate-500 uppercase">Time Complexity</span>
-                          <p className="font-mono text-sm font-bold text-blue-600 dark:text-blue-400">
-                            {analysis.timeComplexity || 'O(n)'}
-                          </p>
-                          <p className="text-[10px] text-slate-400">Target: {snippet.targetTimeComplexity || 'Optimal'}</p>
-                        </div>
-                        <div className="rounded border border-slate-200 dark:border-[#3a3a3a] bg-white dark:bg-[#262626] p-3 space-y-1">
-                          <span className="text-[10px] font-semibold text-slate-500 uppercase">Space Complexity</span>
-                          <p className="font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                            {analysis.spaceComplexity || 'O(1)'}
-                          </p>
-                          <p className="text-[10px] text-slate-400">Target: {snippet.targetSpaceComplexity || 'Optimal'}</p>
+                    {/* Current Version Complexity Card (DSA Only) */}
+                    {!isSql && (
+                      <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-3">
+                        <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
+                          Current Version Complexity
+                        </h4>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="rounded border border-slate-200 dark:border-[#3a3a3a] bg-white dark:bg-[#262626] p-3 space-y-1">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase">Time Complexity</span>
+                            <p className="font-mono text-sm font-bold text-blue-600 dark:text-blue-400">
+                              {analysis.timeComplexity || 'O(n)'}
+                            </p>
+                            <p className="text-[10px] text-slate-400">Target: {snippet.targetTimeComplexity || 'Optimal'}</p>
+                          </div>
+                          <div className="rounded border border-slate-200 dark:border-[#3a3a3a] bg-white dark:bg-[#262626] p-3 space-y-1">
+                            <span className="text-[10px] font-semibold text-slate-500 uppercase">Space Complexity</span>
+                            <p className="font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                              {analysis.spaceComplexity || 'O(1)'}
+                            </p>
+                            <p className="text-[10px] text-slate-400">Target: {snippet.targetSpaceComplexity || 'Optimal'}</p>
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Syntax & Compilation Status */}
                     <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-2">
@@ -1049,23 +1090,23 @@ export default function SnippetPage() {
                           Approach You Followed
                         </h4>
                         <p className="text-slate-700 dark:text-slate-300 leading-relaxed mt-1">
-                          {analysis.currentApproach || 'Evaluated your current algorithm implementation and state transitions.'}
+                          {analysis.currentApproach || (isSql ? 'Evaluated your SQL query clauses and structure.' : 'Evaluated your current algorithm implementation and state transitions.')}
                         </p>
                       </div>
 
                       <div className="border-t border-slate-200 dark:border-[#333333] pt-3">
                         <h4 className="font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-[11px]">
-                          Approach You Should Follow (To Reach Target Complexity)
+                          {isSql ? 'Optimal Query Strategy & Best Practice' : 'Approach You Should Follow (To Reach Target Complexity)'}
                         </h4>
                         <p className="text-slate-700 dark:text-slate-300 leading-relaxed mt-1">
-                          {analysis.recommendedApproach || `Apply optimal ${snippet.topic} pattern to achieve ${snippet.targetTimeComplexity || 'optimal'} time and ${snippet.targetSpaceComplexity || 'optimal'} space.`}
+                          {analysis.recommendedApproach || (isSql ? `Follow optimal ${snippet.topic} pattern.` : `Apply optimal ${snippet.topic} pattern to achieve ${snippet.targetTimeComplexity || 'optimal'} time and ${snippet.targetSpaceComplexity || 'optimal'} space.`)}
                         </p>
                       </div>
                     </div>
                   </>
                 ) : (
                   <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-8 text-center text-xs text-slate-500">
-                    <p>Click "Explain & Review" in the editor toolbar to inspect time/space complexity, syntax check, and approach comparison.</p>
+                    <p>{isSql ? 'Click "Explain & Review" in the editor toolbar to inspect SQL syntax and query strategy.' : 'Click "Explain & Review" in the editor toolbar to inspect time/space complexity, syntax check, and approach comparison.'}</p>
                   </div>
                 )}
               </div>

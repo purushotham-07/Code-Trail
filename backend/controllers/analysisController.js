@@ -38,11 +38,56 @@ export const getComplexityRank = (complexityStr = '') => {
 export const generatePatternHints = (topic = 'General', domain = 'dsa') => {
   const top = String(topic || 'General').trim();
   if (domain === 'sql') {
-    return [
-      `Hint 1 (Clause Execution): Determine whether row-level filtering (WHERE) or group-level aggregation (GROUP BY / HAVING / WINDOW) should execute first for ${top}.`,
-      `Hint 2 (Query Architecture): Utilize CTEs (WITH clause) or Window Functions (OVER (PARTITION BY ... ORDER BY ...)) to avoid correlated subquery overhead.`,
-      `Hint 3 (Optimization & Edge Cases): Account for NULL values in joins, tie-breaking in RANK() vs DENSE_RANK(), and index usage on foreign key columns.`,
-    ];
+    switch (top) {
+      case 'Window Functions':
+        return [
+          'Hint 1 (Query Strategy): Use DENSE_RANK() or ROW_NUMBER() over an ORDER BY clause (e.g. DENSE_RANK() OVER (ORDER BY salary DESC)) to assign ranking metrics across rows.',
+          'Hint 2 (Query Architecture): Window functions cannot be filtered directly in a WHERE clause. Wrap the window query inside a subquery or Common Table Expression (WITH CTE AS ...).',
+          'Hint 3 (Edge Cases & Ties): If identical values exist (e.g. two employees with the same salary), decide whether they share the rank (DENSE_RANK) or get distinct sequential numbers (ROW_NUMBER).',
+        ];
+      case 'CTEs & Recursive Queries':
+        return [
+          'Hint 1 (Query Strategy): For Nth Highest Salary or Top-N filtering, either declare a CTE with DENSE_RANK() or decrement N (SET N = N - 1;) to use LIMIT 1 OFFSET N.',
+          'Hint 2 (Function Syntax): When writing a MySQL/PostgreSQL function (CREATE FUNCTION ... BEGIN ... RETURN ( ... ); END), ensure the scalar query inside RETURN is wrapped in parentheses.',
+          'Hint 3 (Edge Cases & NULL Handling): If fewer than N records exist, a subquery SELECT (SELECT DISTINCT salary ... LIMIT 1 OFFSET N) naturally evaluates to NULL instead of an empty set.',
+        ];
+      case 'Multi-Table Joins':
+        return [
+          'Hint 1 (Query Strategy): Determine if rows from the primary table must be retained even when no match exists (use LEFT JOIN) or if only matching pairs are required (use INNER JOIN).',
+          'Hint 2 (Join Condition): Always specify explicit join predicates (ON table_a.id = table_b.foreign_id) to avoid Cartesian products.',
+          'Hint 3 (Edge Cases & NULLs): When looking for records that do NOT exist in the secondary table, use LEFT JOIN ... WHERE table_b.id IS NULL.',
+        ];
+      case 'Aggregations & Grouping':
+        return [
+          'Hint 1 (Query Strategy): Remember the execution lifecycle: WHERE filters rows before aggregation; GROUP BY forms groups; HAVING filters aggregated results.',
+          'Hint 2 (Group Invariant): Every non-aggregated column selected in the SELECT clause must appear in the GROUP BY clause.',
+          'Hint 3 (Edge Cases & Distinct): Be careful with COUNT(column) vs COUNT(*). Use COUNT(DISTINCT column) when uniqueness is required across groups.',
+        ];
+      case 'Ranking & Partitioning':
+        return [
+          'Hint 1 (Query Strategy): Choose the exact ranking function: ROW_NUMBER() (unique 1,2,3), RANK() (gap on ties 1,2,2,4), or DENSE_RANK() (continuous on ties 1,2,2,3).',
+          'Hint 2 (Partition Frame): When ranking within subgroups (e.g. highest salary per department), add PARTITION BY department_id to your OVER clause.',
+          'Hint 3 (Edge Cases & Ties): Add secondary sort columns in ORDER BY to ensure deterministic tie-breaking.',
+        ];
+      case 'Date & Time Manipulation':
+        return [
+          'Hint 1 (Query Strategy): Use dialect date functions (DATEDIFF(d1, d2), DATE_ADD, or d1 - INTERVAL 1 DAY) to calculate time deltas.',
+          'Hint 2 (Self-Joins): For consecutive date tracking (e.g. rising temperatures), join the table with itself ON DATEDIFF(t1.recordDate, t2.recordDate) = 1.',
+          'Hint 3 (Edge Cases): Account for leap years, end-of-month rollovers, and dates that might not have consecutive day entries.',
+        ];
+      case 'Subqueries & Correlated':
+        return [
+          'Hint 1 (Query Strategy): Use WHERE EXISTS (SELECT 1 FROM ... WHERE ...) for fast existence checks that terminate on the first match.',
+          'Hint 2 (Scalar Subqueries): Ensure scalar subqueries used in expressions evaluate to at most one row and one column.',
+          'Hint 3 (Optimization): Avoid deeply nested correlated subqueries in large tables by rewriting them as JOINs or CTEs with indexes.',
+        ];
+      default:
+        return [
+          'Hint 1 (Clause Execution): Determine whether row-level filtering (WHERE) or group-level aggregation (GROUP BY / HAVING / WINDOW) should execute first.',
+          'Hint 2 (Query Architecture): Utilize CTEs (WITH clause) or Window Functions to avoid repetitive subquery scans.',
+          'Hint 3 (Optimization & NULLs): Test edge cases: empty tables, single-row inputs, duplicate values, and NULL handling.',
+        ];
+    }
   }
 
   switch (top) {
@@ -393,50 +438,88 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
 
   // 5. SQL Specific Rules
   if (lang === 'sql') {
+    const sqlTypos = [
+      { pattern: /\bLIMI\b/i, typo: 'LIMI', correct: 'LIMIT' },
+      { pattern: /\bLMIT\b/i, typo: 'LMIT', correct: 'LIMIT' },
+      { pattern: /\bLIMT\b/i, typo: 'LIMT', correct: 'LIMIT' },
+      { pattern: /\bOFFST\b/i, typo: 'OFFST', correct: 'OFFSET' },
+      { pattern: /\bOFSET\b/i, typo: 'OFSET', correct: 'OFFSET' },
+      { pattern: /\bSELETC\b/i, typo: 'SELETC', correct: 'SELECT' },
+      { pattern: /\bSELET\b/i, typo: 'SELET', correct: 'SELECT' },
+      { pattern: /\bSELCT\b/i, typo: 'SELCT', correct: 'SELECT' },
+      { pattern: /\bSLECT\b/i, typo: 'SLECT', correct: 'SELECT' },
+      { pattern: /\bWHER\b/i, typo: 'WHER', correct: 'WHERE' },
+      { pattern: /\bWERE\b/i, typo: 'WERE', correct: 'WHERE' },
+      { pattern: /\bWHRE\b/i, typo: 'WHRE', correct: 'WHERE' },
+      { pattern: /\bFROMM\b/i, typo: 'FROMM', correct: 'FROM' },
+      { pattern: /\bFRM\b/i, typo: 'FRM', correct: 'FROM' },
+      { pattern: /\bINER\s+JOIN\b/i, typo: 'INER JOIN', correct: 'INNER JOIN' },
+      { pattern: /\bINNR\s+JOIN\b/i, typo: 'INNR JOIN', correct: 'INNER JOIN' },
+      { pattern: /\bLEFTT\s+JOIN\b/i, typo: 'LEFTT JOIN', correct: 'LEFT JOIN' },
+      { pattern: /\bRIGTH\s+JOIN\b/i, typo: 'RIGTH JOIN', correct: 'RIGHT JOIN' },
+      { pattern: /\bGROPU\s+BY\b/i, typo: 'GROPU BY', correct: 'GROUP BY' },
+      { pattern: /\bGROUPBY\b/i, typo: 'GROUPBY', correct: 'GROUP BY' },
+      { pattern: /\bGROP\s+BY\b/i, typo: 'GROP BY', correct: 'GROUP BY' },
+      { pattern: /\bORDRE\s+BY\b/i, typo: 'ORDRE BY', correct: 'ORDER BY' },
+      { pattern: /\bORDERBY\b/i, typo: 'ORDERBY', correct: 'ORDER BY' },
+      { pattern: /\bORDR\s+BY\b/i, typo: 'ORDR BY', correct: 'ORDER BY' },
+      { pattern: /\bORER\s+BY\b/i, typo: 'ORER BY', correct: 'ORDER BY' },
+      { pattern: /\bHAVNG\b/i, typo: 'HAVNG', correct: 'HAVING' },
+      { pattern: /\bHAVIN\b/i, typo: 'HAVIN', correct: 'HAVING' },
+      { pattern: /\bDISTINC\b/i, typo: 'DISTINC', correct: 'DISTINCT' },
+      { pattern: /\bDISTINCTT\b/i, typo: 'DISTINCTT', correct: 'DISTINCT' },
+      { pattern: /\bDITINCT\b/i, typo: 'DITINCT', correct: 'DISTINCT' },
+      { pattern: /\bPARTITON\s+BY\b/i, typo: 'PARTITON BY', correct: 'PARTITION BY' },
+      { pattern: /\bPARTION\s+BY\b/i, typo: 'PARTION BY', correct: 'PARTITION BY' },
+      { pattern: /\bDENSE_RAN\b/i, typo: 'DENSE_RAN', correct: 'DENSE_RANK' },
+      { pattern: /\bDENSE_RANKK\b/i, typo: 'DENSE_RANKK', correct: 'DENSE_RANK' },
+      { pattern: /\bROW_NUMBR\b/i, typo: 'ROW_NUMBR', correct: 'ROW_NUMBER' },
+      { pattern: /\bROW_NUMER\b/i, typo: 'ROW_NUMER', correct: 'ROW_NUMBER' },
+      { pattern: /\bCREAT\b/i, typo: 'CREAT', correct: 'CREATE' },
+      { pattern: /\bCRATE\b/i, typo: 'CRATE', correct: 'CREATE' },
+      { pattern: /\bFUNTION\b/i, typo: 'FUNTION', correct: 'FUNCTION' },
+      { pattern: /\bFUNCITON\b/i, typo: 'FUNCITON', correct: 'FUNCTION' },
+      { pattern: /\bFUCTION\b/i, typo: 'FUCTION', correct: 'FUNCTION' },
+      { pattern: /\bRETURS\b/i, typo: 'RETURS', correct: 'RETURNS' },
+      { pattern: /\bRETUNS\b/i, typo: 'RETUNS', correct: 'RETURNS' },
+      { pattern: /\bRETUR\b/i, typo: 'RETUR', correct: 'RETURN' },
+      { pattern: /\bBEIGN\b/i, typo: 'BEIGN', correct: 'BEGIN' },
+      { pattern: /\bBGIN\b/i, typo: 'BGIN', correct: 'BEGIN' },
+      { pattern: /\bPROCEDUR\b/i, typo: 'PROCEDUR', correct: 'PROCEDURE' },
+      { pattern: /\bEXITS\b/i, typo: 'EXITS', correct: 'EXISTS' },
+      { pattern: /\bUNOIN\b/i, typo: 'UNOIN', correct: 'UNION' },
+    ];
+
     rawLines.forEach((lineText, lineIdx) => {
       const lineNum = lineIdx + 1;
       const trimmed = lineText.trim();
       if (!trimmed || trimmed.startsWith('--') || trimmed.startsWith('/*')) return;
 
-      if (/\bWHER\b/i.test(lineText)) {
-        issues.push({
-          title: "SQL keyword typo 'WHER'",
-          severity: 'Critical',
-          line: lineNum,
-          column: lineText.search(/\bWHER\b/i) + 1,
-          description: "Keyword 'WHER' is misspelled.",
-          fix: "Replace 'WHER' with 'WHERE'.",
-        });
-      }
-      if (/\bSELETC\b/i.test(lineText) || /\bSELET\b/i.test(lineText)) {
-        issues.push({
-          title: "SQL keyword typo in 'SELECT'",
-          severity: 'Critical',
-          line: lineNum,
-          column: 1,
-          description: "Keyword 'SELECT' is misspelled.",
-          fix: "Replace with 'SELECT'.",
-        });
-      }
-      if (/\bINER\s+JOIN\b/i.test(lineText)) {
-        issues.push({
-          title: "SQL keyword typo 'INER JOIN'",
-          severity: 'Critical',
-          line: lineNum,
-          column: lineText.search(/\bINER\s+JOIN\b/i) + 1,
-          description: "Keyword 'INER JOIN' is misspelled.",
-          fix: "Replace 'INER JOIN' with 'INNER JOIN'.",
-        });
-      }
-      if (/,\s*FROM\b/i.test(lineText)) {
-        issues.push({
-          title: 'Trailing comma before FROM clause',
-          severity: 'Critical',
-          line: lineNum,
-          column: lineText.search(/,\s*FROM\b/i) + 1,
-          description: "SQL syntax error: unexpected comma immediately before 'FROM'.",
-          fix: "Remove the trailing comma before 'FROM'.",
-        });
+      sqlTypos.forEach(({ pattern, typo, correct }) => {
+        if (pattern.test(lineText)) {
+          issues.push({
+            title: `SQL keyword typo '${typo}'`,
+            severity: 'Critical',
+            line: lineNum,
+            column: lineText.search(pattern) + 1,
+            description: `Keyword '${typo}' is misspelled.`,
+            fix: `Replace '${typo}' with '${correct}'.`,
+          });
+        }
+      });
+
+      if (/,\s*(FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT)\b/i.test(lineText)) {
+        const match = lineText.match(/,\s*(FROM|WHERE|GROUP\s+BY|ORDER\s+BY|HAVING|LIMIT)\b/i);
+        if (match) {
+          issues.push({
+            title: `Trailing comma before ${match[1].toUpperCase()} clause`,
+            severity: 'Critical',
+            line: lineNum,
+            column: lineText.indexOf(',') + 1,
+            description: `Unexpected comma immediately before '${match[1]}'.`,
+            fix: `Remove the trailing comma before '${match[1]}'.`,
+          });
+        }
       }
     });
   }
@@ -551,26 +634,29 @@ ${code}
 `;
 
 /**
- * Super-compact prompt for SQL: only time/space complexity, syntax check, approach review & 3 progressive hints.
+ * Super-compact prompt for SQL: syntax check, approach review & 3 progressive hints.
  */
 const promptForSQL = (code, dialect, sqlSchema, problemStatement) => `
 Analyze this ${dialect || 'SQL'} query for the problem: "${problemStatement || 'SQL Data Query'}".
-Schema: ${sqlSchema || 'Standard tables'}
+Schema / Context: ${sqlSchema || 'Standard tables'}
 
 Tasks:
-1. Check for SQL syntax errors. Set "hasSyntaxErrors": true/false. List in "syntaxErrors" [{ "title": "...", "line": 1, "description": "...", "fix": "..." }].
-2. Evaluate "timeComplexity" (e.g. "O(N log N) / Index Scan") and "spaceComplexity" (e.g. "O(1) / O(N) Temp Table").
-3. State "currentApproach": 1-2 sentences on what query approach was used.
-4. State "recommendedApproach": 1-2 sentences on what optimal query / indexing strategy achieves target performance.
-5. Set "targetComplexityMet": true/false.
-6. Provide 3 progressive "hints" tailored to the problem statement.
+1. Strict SQL Syntax & Grammar Check:
+   Check for SQL syntax errors, spelling mistakes in keywords (e.g. "LIMI" instead of "LIMIT", "SELETC", "INER JOIN", "WHER", "DISTINC"), missing commas/clauses, unclosed brackets/parentheses, or invalid function syntax (e.g. CREATE FUNCTION ... BEGIN ... RETURN ... END).
+   If syntax errors exist, set "hasSyntaxErrors": true and list in "syntaxErrors" [{ "title": "...", "line": 1, "description": "...", "fix": "..." }].
+   Otherwise set "hasSyntaxErrors": false and "syntaxErrors": [].
+2. State "currentApproach": 1-2 sentences on what query approach and clauses were used.
+3. State "recommendedApproach": 1-2 sentences on what optimal query strategy (CTEs, Window Functions, or indexing) is recommended.
+4. Set "targetComplexityMet": true (set false only if syntax errors exist or query logic fails).
+5. Provide 3 progressive "hints" tailored specifically to this SQL problem:
+   - Hint 1: Query strategy & clause execution order
+   - Hint 2: Query structure & edge cases (e.g. 0-based OFFSET, duplicate handling, NULL values)
+   - Hint 3: Optimal pattern & dialect best practice
 
 Return ONLY valid JSON (no markdown fences):
 {
   "hasSyntaxErrors": false,
   "syntaxErrors": [],
-  "timeComplexity": "O(...)",
-  "spaceComplexity": "O(...)",
   "currentApproach": "...",
   "recommendedApproach": "...",
   "targetComplexityMet": true,
@@ -665,16 +751,17 @@ export const analyzeSnippetCode = async (req, res) => {
 
     if (!process.env.GROQ_API_KEY) {
       markRequest(req.user.id);
+      const isSqlLocal = domain === 'sql' || language === 'sql';
       const fallbackHints = generatePatternHints(topic, domain);
       return res.json({
         source: 'local',
         hasSyntaxErrors: staticIssues.length > 0,
         errorLines: staticIssues.map((i) => i.line).filter(Boolean),
         issues: staticIssues,
-        timeComplexity: 'N/A',
-        spaceComplexity: 'N/A',
-        currentApproach: 'Static review of code structure completed.',
-        recommendedApproach: `Follow optimal ${topic} pattern to achieve ${targetTimeComplexity || 'O(n)'}.`,
+        timeComplexity: isSqlLocal ? 'N/A' : 'N/A',
+        spaceComplexity: isSqlLocal ? 'N/A' : 'N/A',
+        currentApproach: isSqlLocal ? 'Static review of SQL query structure completed.' : 'Static review of code structure completed.',
+        recommendedApproach: isSqlLocal ? `Follow optimal ${topic} SQL pattern.` : `Follow optimal ${topic} pattern to achieve ${targetTimeComplexity || 'O(n)'}.`,
         targetComplexityMet: staticIssues.length === 0,
         isSolved: staticIssues.length === 0,
         hints: fallbackHints,
@@ -745,12 +832,12 @@ export const analyzeSnippetCode = async (req, res) => {
       hasSyntaxErrors,
       errorLines: errorLineNumbers,
       issues: formattedIssues,
-      timeComplexity: parsed.timeComplexity || 'O(n)',
-      spaceComplexity: parsed.spaceComplexity || 'O(1)',
-      currentApproach: parsed.currentApproach || 'Evaluated current algorithm implementation.',
-      recommendedApproach: parsed.recommendedApproach || `Implement ${topic} to achieve ${targetTimeComplexity || 'optimal complexity'}.`,
-      targetComplexityMet: isTargetMet,
-      isSolved: isTargetMet && !hasSyntaxErrors,
+      timeComplexity: isSql ? 'N/A' : (parsed.timeComplexity || 'O(n)'),
+      spaceComplexity: isSql ? 'N/A' : (parsed.spaceComplexity || 'O(1)'),
+      currentApproach: parsed.currentApproach || (isSql ? 'Evaluated SQL query structure and clauses.' : 'Evaluated current algorithm implementation.'),
+      recommendedApproach: parsed.recommendedApproach || (isSql ? `Follow optimal ${topic} pattern.` : `Implement ${topic} to achieve ${targetTimeComplexity || 'optimal complexity'}.`),
+      targetComplexityMet: isSql ? !hasSyntaxErrors : isTargetMet,
+      isSolved: isSql ? !hasSyntaxErrors : (isTargetMet && !hasSyntaxErrors),
       hints: (Array.isArray(parsed.hints) && parsed.hints.length > 0)
         ? parsed.hints
         : generatePatternHints(topic, domain),
@@ -785,20 +872,21 @@ export const analyzeSnippetCode = async (req, res) => {
     return res.json(result);
   } catch (error) {
     console.error('Analysis error:', error.message);
+    const isSql = req.body?.domain === 'sql' || req.body?.language === 'sql';
     const fallbackHints = generatePatternHints(req.body?.topic, req.body?.domain);
     return res.json({
       source: 'local',
       hasSyntaxErrors: false,
       errorLines: [],
       issues: [],
-      timeComplexity: req.body?.targetTimeComplexity || 'O(n)',
-      spaceComplexity: req.body?.targetSpaceComplexity || 'O(1)',
-      currentApproach: 'Review of current code structure completed.',
-      recommendedApproach: `Follow standard ${req.body?.topic || 'DSA'} pattern.`,
+      timeComplexity: isSql ? 'N/A' : (req.body?.targetTimeComplexity || 'O(n)'),
+      spaceComplexity: isSql ? 'N/A' : (req.body?.targetSpaceComplexity || 'O(1)'),
+      currentApproach: isSql ? 'Review of current SQL query structure completed.' : 'Review of current code structure completed.',
+      recommendedApproach: isSql ? `Follow standard ${req.body?.topic || 'SQL'} pattern.` : `Follow standard ${req.body?.topic || 'DSA'} pattern.`,
       targetComplexityMet: true,
       isSolved: true,
       hints: fallbackHints,
-      groqEnabled: true,
+      groqEnabled: false,
     });
   }
 };
