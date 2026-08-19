@@ -16,10 +16,28 @@ const markRequest = (userId) => {
 
 const CANDIDATE_MODELS = [
   process.env.GROQ_MODEL,
+  'llama-3.3-70b-versatile',
+  'llama-3.1-8b-instant',
+  'llama3-70b-8192',
+  'mixtral-8x7b-32768',
   'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
   'groq/compound',
 ].filter(Boolean);
+
+export const getComplexityRank = (complexityStr = '') => {
+  const s = String(complexityStr).toLowerCase().replace(/\s+/g, '');
+  if (!s || s === 'optimal') return 3;
+  if (s.includes('o(1)')) return 1;
+  if (s.includes('o(logn)') || s.includes('o(log(n))')) return 2;
+  if (s.includes('o(n)') || s.includes('o(n+m)') || s.includes('o(v+e)')) return 3;
+  if (s.includes('o(nlogn)') || s.includes('o(n*logn)') || s.includes('o(nlogk)')) return 4;
+  if (s.includes('o(n^2)') || s.includes('o(n2)') || s.includes('o(n*m)')) return 5;
+  if (s.includes('o(n^3)') || s.includes('o(n3)')) return 6;
+  if (s.includes('o(2^n)') || s.includes('o(2n)')) return 7;
+  if (s.includes('o(n!)')) return 8;
+  return 4;
+};
 
 /**
  * Deterministic static syntax & parser pre-check for DSA (Java, Python, C++, JS) & SQL.
@@ -578,6 +596,13 @@ export const analyzeSnippetCode = async (req, res) => {
     const issueTexts = issuesToText(formattedIssues);
     const errorLineNumbers = extractErrorLinesFromIssues(formattedIssues);
 
+    const actualTime = parsed.timeComplexity || '';
+    const actualTimeRank = getComplexityRank(actualTime);
+    const targetTimeRank = targetTimeComplexity ? getComplexityRank(targetTimeComplexity) : 4;
+    const isTargetMet = parsed.targetComplexityMet !== undefined && parsed.targetComplexityMet !== null
+      ? Boolean(parsed.targetComplexityMet)
+      : actualTimeRank <= targetTimeRank && !hasSyntaxErrors;
+
     const result = {
       source: 'groq',
       groqEnabled: true,
@@ -594,10 +619,11 @@ export const analyzeSnippetCode = async (req, res) => {
         : hasSyntaxErrors ? 3 : 8,
       ratings: parsed.ratings || { performance: 8, readability: 8, maintainability: 8, security: 9, scalability: 8 },
       algorithm: parsed.algorithm || '',
-      approach: parsed.approach || '',
+      approach: parsed.approach || (isTargetMet ? 'Optimal' : 'Sub-Optimal'),
       timeComplexity: parsed.timeComplexity || '',
       spaceComplexity: parsed.spaceComplexity || '',
-      targetComplexityMet: parsed.targetComplexityMet ?? null,
+      targetComplexityMet: isTargetMet,
+      isSolved: isTargetMet && !hasSyntaxErrors,
       dataStructureRecommendations: parsed.dataStructureRecommendations || '',
       explanation: parsed.explanation || 'Code review completed.',
       summary: parsed.summary || 'Review findings summarized above.',

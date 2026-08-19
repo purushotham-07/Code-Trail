@@ -562,6 +562,13 @@ export default function SnippetPage() {
               </span>
             )}
 
+            {(analysis?.isSolved || (analysis?.targetComplexityMet && !analysis?.hasSyntaxErrors)) && (
+              <span className="rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold flex items-center gap-1">
+                <span>✓</span>
+                <span>Solved</span>
+              </span>
+            )}
+
             {snippet.topic && snippet.topic !== 'General' && (
               <span className="rounded bg-slate-100 dark:bg-[#333333] px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#404040]">
                 {snippet.topic}
@@ -941,6 +948,43 @@ export default function SnippetPage() {
               <div className="space-y-4 text-xs">
                 {analysis ? (
                   <>
+                    {/* Complexity Solved / Sub-optimal Status Alert */}
+                    {(analysis.isSolved || (analysis.targetComplexityMet && !analysis.hasSyntaxErrors)) ? (
+                      <div className="rounded-lg border border-emerald-300 dark:border-emerald-800/80 bg-emerald-50 dark:bg-emerald-950/40 p-3.5 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white font-bold text-xs">
+                            ✓
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-emerald-800 dark:text-emerald-300 text-xs">Target Complexity Achieved • Solved</h4>
+                            <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                              Achieved {analysis.timeComplexity || 'Optimal Time'} ({analysis.spaceComplexity || 'Optimal Space'}). Meets the target complexity benchmarks!
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded bg-emerald-600 px-2 py-0.5 text-[10px] font-bold text-white uppercase shrink-0">
+                          Optimal
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-amber-300 dark:border-amber-800/80 bg-amber-50 dark:bg-amber-950/40 p-3.5 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-xs">
+                            !
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-amber-800 dark:text-amber-300 text-xs">Sub-Optimal Complexity</h4>
+                            <p className="text-[11px] text-amber-700 dark:text-amber-400">
+                              Achieved {analysis.timeComplexity || 'N/A'}. Target is {snippet.targetTimeComplexity || 'Optimal'}. Check the Hints tab for optimization clues!
+                            </p>
+                          </div>
+                        </div>
+                        <span className="rounded bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white uppercase shrink-0">
+                          Optimize
+                        </span>
+                      </div>
+                    )}
+
                     {/* Score & Category Card */}
                     <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-[#333333] pb-3">
