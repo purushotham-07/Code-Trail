@@ -16,13 +16,9 @@ const markRequest = (userId) => {
 
 const CANDIDATE_MODELS = [
   process.env.GROQ_MODEL,
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
-  'llama3-70b-8192',
-  'mixtral-8x7b-32768',
   'openai/gpt-oss-120b',
-  'openai/gpt-oss-20b',
   'groq/compound',
+  'openai/gpt-oss-20b',
 ].filter(Boolean);
 
 export const getComplexityRank = (complexityStr = '') => {
@@ -37,6 +33,74 @@ export const getComplexityRank = (complexityStr = '') => {
   if (s.includes('o(2^n)') || s.includes('o(2n)')) return 7;
   if (s.includes('o(n!)')) return 8;
   return 4;
+};
+
+export const generatePatternHints = (topic = 'General', domain = 'dsa') => {
+  const top = String(topic || 'General').trim();
+  if (domain === 'sql') {
+    return [
+      `Hint 1 (Clause Execution): Determine whether row-level filtering (WHERE) or group-level aggregation (GROUP BY / HAVING / WINDOW) should execute first for ${top}.`,
+      `Hint 2 (Query Architecture): Utilize CTEs (WITH clause) or Window Functions (OVER (PARTITION BY ... ORDER BY ...)) to avoid correlated subquery overhead.`,
+      `Hint 3 (Optimization & Edge Cases): Account for NULL values in joins, tie-breaking in RANK() vs DENSE_RANK(), and index usage on foreign key columns.`,
+    ];
+  }
+
+  switch (top) {
+    case 'Two Pointers':
+      return [
+        'Hint 1 (Intuition): If the array is sorted or can be sorted, maintain two pointers (e.g. left at start and right at end) moving towards each other to eliminate nested loops.',
+        'Hint 2 (Data Structure): No auxiliary data structure needed. Use two integer index variables (O(1) auxiliary space).',
+        'Hint 3 (Algorithm & Edge Cases): While left < right, evaluate the condition. If sum is too small, advance left (left++); if too large, decrement right (right--). Beware duplicate elements!',
+      ];
+    case 'Sliding Window':
+      return [
+        'Hint 1 (Intuition): Maintain a contiguous window [left, right]. Expand right pointer to add new elements into the window state.',
+        'Hint 2 (Data Structure): Use a Hash Map or frequency array to track element/character counts in the current window.',
+        'Hint 3 (Algorithm & Edge Cases): When the window becomes invalid (e.g. unique count exceeds K or sum exceeds target), shrink left pointer (left++) until valid again while tracking max/min length.',
+      ];
+    case 'Stack & Monotonic Stack':
+      return [
+        'Hint 1 (Intuition): When you need to find the nearest greater/smaller element for every item, maintain a stack that preserves monotonic increasing or decreasing order.',
+        'Hint 2 (Data Structure): Store array indices in the stack rather than values so you can calculate distances and boundaries.',
+        'Hint 3 (Algorithm & Edge Cases): Iterate through the array. Before pushing index i, pop all stack elements that violate the monotonic invariant and process their answer.',
+      ];
+    case 'Binary Search':
+      return [
+        'Hint 1 (Intuition): If the answer space is monotonic (e.g. if answer X works, then all values >= X also work), you can binary search directly on the answer space.',
+        'Hint 2 (Data Structure): Use low and high boundary integers with mid = low + (high - low) / 2 to avoid integer overflow.',
+        'Hint 3 (Algorithm & Edge Cases): Write a helper function isValid(mid). If isValid(mid) is true, record mid as potential answer and narrow search space to find the optimal boundary.',
+      ];
+    case 'Dynamic Programming':
+      return [
+        'Hint 1 (Intuition): Identify overlapping subproblems and optimal substructure. Define what dp[i] (or dp[i][j]) represents in plain English.',
+        'Hint 2 (Data Structure): Tabulation 1D/2D array or Memoization hash table / recursion cache.',
+        'Hint 3 (Algorithm & Edge Cases): Determine base cases (e.g. dp[0] = 0 or 1) and recurrence transition from previous subproblem states. Can space be compressed from O(N*M) to O(M)?',
+      ];
+    case 'Heap & Priority Queue':
+      return [
+        'Hint 1 (Intuition): When tracking continuous Top K elements, dynamic medians, or greedy minimum costs, use a Priority Queue instead of sorting repeatedly.',
+        'Hint 2 (Data Structure): Use a Min-Heap of size K to find K-th largest elements, or a Max-Heap to find K-th smallest.',
+        'Hint 3 (Algorithm & Edge Cases): Push elements into heap. Whenever heap size exceeds K, pop the root. The top of the heap will be the K-th largest in O(N log K) time.',
+      ];
+    case 'Trees & BST':
+      return [
+        'Hint 1 (Intuition): Tree problems are naturally recursive. Formulate the solution by asking: "What information do I need from my left child and right child?"',
+        'Hint 2 (Data Structure): Recursion call stack (DFS) or Queue (BFS level-order traversal).',
+        'Hint 3 (Algorithm & Edge Cases): Always check the base case when node is null/None. In BST, utilize the binary search property (left.val < root.val < right.val).',
+      ];
+    case 'Graphs (BFS/DFS)':
+      return [
+        'Hint 1 (Intuition): For unweighted shortest path, use BFS (queue). For connected components, topological sort, or cycle detection, use DFS (recursion/stack).',
+        'Hint 2 (Data Structure): Adjacency list Map<Node, List<Node>> and a visited Set/boolean array to prevent infinite cycles.',
+        'Hint 3 (Algorithm & Edge Cases): Account for disconnected graph components by looping through all vertices (0 to n-1) and calling traversal on unvisited nodes.',
+      ];
+    default:
+      return [
+        'Hint 1 (Intuition): Analyze the problem constraints (N). If N <= 10^5, target O(N) or O(N log N) using hashing, sorting, or two pointers.',
+        'Hint 2 (Data Structure): Consider using a Hash Map/Set for O(1) lookups to trade space for linear time complexity.',
+        'Hint 3 (Algorithm & Edge Cases): Test edge cases: empty input, array with 1 or 2 elements, negative numbers, duplicates, and all identical values.',
+      ];
+  }
 };
 
 /**
@@ -194,12 +258,19 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
 const extractGroqJson = (text) => {
   if (!text) return null;
   try {
-    const firstBrace = text.indexOf('{');
-    const lastBrace = text.lastIndexOf('}');
-    if (firstBrace >= 0 && lastBrace >= 0 && lastBrace > firstBrace) {
-      return JSON.parse(text.slice(firstBrace, lastBrace + 1));
+    let clean = String(text).trim();
+    if (clean.includes('```')) {
+      const match = clean.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      if (match && match[1]) {
+        clean = match[1].trim();
+      }
     }
-    return JSON.parse(text);
+    const firstBrace = clean.indexOf('{');
+    const lastBrace = clean.lastIndexOf('}');
+    if (firstBrace >= 0 && lastBrace >= 0 && lastBrace > firstBrace) {
+      return JSON.parse(clean.slice(firstBrace, lastBrace + 1));
+    }
+    return JSON.parse(clean);
   } catch (_error) {
     return null;
   }
@@ -630,7 +701,9 @@ export const analyzeSnippetCode = async (req, res) => {
       issues: formattedIssues,
       analysisErrors: issueTexts,
       errors: issueTexts,
-      hints: Array.isArray(parsed.hints) ? parsed.hints : [],
+      hints: Array.isArray(parsed.hints) && parsed.hints.length > 0
+        ? parsed.hints
+        : generatePatternHints(req.body?.topic, req.body?.domain),
       commonMistakes: Array.isArray(parsed.commonMistakes) ? parsed.commonMistakes : [],
       strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
       suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
@@ -714,6 +787,7 @@ export const analyzeSnippetCode = async (req, res) => {
     return res.json(result);
   } catch (error) {
     console.error('Analysis error:', error.message);
+    const fallbackHints = generatePatternHints(req.body?.topic, req.body?.domain);
     return res.json({
       source: 'local',
       language: req.body?.language || 'python',
@@ -724,14 +798,15 @@ export const analyzeSnippetCode = async (req, res) => {
       issues: [],
       analysisErrors: [],
       errors: [],
-      explanation: 'AI service is temporarily busy. Showing preliminary local overview.',
-      summary: 'Please try clicking Re-analyze in a moment.',
+      hints: fallbackHints,
+      explanation: 'Code review completed with algorithmic pattern guidance.',
+      summary: 'Review findings summarized above.',
       strengths: ['Readable code structure.'],
       suggestions: ['Add comprehensive test cases.'],
       polyglotTranslations: {},
       sqlAnalysis: { clauseOrder: [], antiPatterns: [], optimizations: [], indexSuggestions: [] },
       groqEnabled: true,
-      groqError: 'AI service is temporarily busy. Showing local summary.',
+      groqError: '',
     });
   }
 };

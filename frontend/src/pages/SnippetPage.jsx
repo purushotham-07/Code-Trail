@@ -23,6 +23,7 @@ import {
   TIME_COMPLEXITY_OPTIONS,
   SPACE_COMPLEXITY_OPTIONS,
   detectTopicAndTags,
+  generateTopicHints,
 } from '../utils/languages.js';
 
 function extractErrorLines(errors = []) {
@@ -154,6 +155,13 @@ export default function SnippetPage() {
     (analysis?.issues?.length > 0) ||
     (analysis?.errors?.length > 0) ||
     (analysis?.analysisErrors?.length > 0);
+
+  const effectiveHints = useMemo(() => {
+    if (Array.isArray(analysis?.hints) && analysis.hints.length > 0) {
+      return analysis.hints;
+    }
+    return generateTopicHints(snippet?.topic, snippet?.domain);
+  }, [analysis?.hints, snippet?.topic, snippet?.domain]);
 
   const toggleHintReveal = (index) => {
     setRevealedHints((prev) => {
@@ -768,11 +776,9 @@ export default function SnippetPage() {
               }`}
             >
               <span>Hints</span>
-              {analysis?.hints?.length ? (
-                <span className="rounded-full bg-blue-100 dark:bg-blue-900/60 px-1.5 text-[10px] text-blue-700 dark:text-blue-300">
-                  {analysis.hints.length}
-                </span>
-              ) : null}
+              <span className="rounded-full bg-blue-100 dark:bg-blue-900/60 px-1.5 text-[10px] text-blue-700 dark:text-blue-300">
+                {effectiveHints.length}
+              </span>
             </button>
 
             {!isSql && (
@@ -898,41 +904,35 @@ export default function SnippetPage() {
                   </p>
                 </div>
 
-                {analysis?.hints?.length ? (
-                  <div className="space-y-2.5">
-                    {analysis.hints.map((hint, i) => {
-                      const isRevealed = revealedHints.has(i);
-                      return (
-                        <div
-                          key={`hint-${i}`}
-                          className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-3.5 text-xs space-y-2"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              Hint {i + 1} {i === 0 ? '(Intuition)' : i === 1 ? '(Data Structure)' : '(Algorithm & Edge Cases)'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => toggleHintReveal(i)}
-                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
-                            >
-                              {isRevealed ? 'Hide Hint' : 'Reveal Hint'}
-                            </button>
-                          </div>
-                          {isRevealed && (
-                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed pt-2 border-t border-slate-200 dark:border-[#333333]">
-                              {hint}
-                            </p>
-                          )}
+                <div className="space-y-2.5">
+                  {effectiveHints.map((hint, i) => {
+                    const isRevealed = revealedHints.has(i);
+                    return (
+                      <div
+                        key={`hint-${i}`}
+                        className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-3.5 text-xs space-y-2"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">
+                            Hint {i + 1} {i === 0 ? '(Intuition)' : i === 1 ? '(Data Structure)' : '(Algorithm & Edge Cases)'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => toggleHintReveal(i)}
+                            className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                          >
+                            {isRevealed ? 'Hide Hint' : 'Reveal Hint'}
+                          </button>
                         </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-8 text-center text-xs text-slate-500">
-                    <p>Click "Explain & Review" in the editor toolbar to generate tailored 3-tier hints for this problem.</p>
-                  </div>
-                )}
+                        {isRevealed && (
+                          <p className="text-slate-700 dark:text-slate-300 leading-relaxed pt-2 border-t border-slate-200 dark:border-[#333333]">
+                            {hint}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
