@@ -229,8 +229,8 @@ export default function SnippetPage() {
     if (!user) return;
     try {
       const res = await api.get(`/likes/${id}/status`);
-      setLiked(res.data.liked);
-      setLikeCount(res.data.likeCount || 0);
+      setLiked(Boolean(res.data?.liked));
+      setLikeCount(res.data?.likeCount ?? res.data?.count ?? 0);
     } catch (_error) {
       // Ignore
     }
@@ -432,8 +432,8 @@ export default function SnippetPage() {
     }
     try {
       const res = await api.post(`/likes/${id}`);
-      setLiked(res.data.liked);
-      setLikeCount(res.data.likeCount);
+      setLiked(Boolean(res.data?.liked));
+      setLikeCount(res.data?.likeCount ?? res.data?.count ?? 0);
     } catch (_error) {
       // Ignore
     }
@@ -560,7 +560,7 @@ export default function SnippetPage() {
               </span>
             )}
 
-            {((isSql ? (!hasErrors && !analysis?.hasSyntaxErrors) : (analysis?.isSolved || (analysis?.targetComplexityMet && !analysis?.hasSyntaxErrors))) && !hasErrors && (analysis || staticSyntaxIssues.length === 0)) && (
+            {((isSql ? (!hasErrors && !analysis?.hasSyntaxErrors) : (analysis?.isSolved || (analysis?.targetComplexityMet && !analysis?.hasSyntaxErrors))) && !hasErrors) && (
               <span className="rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 text-[10px] font-bold flex items-center gap-1">
                 <span>✓</span>
                 <span>Solved</span>

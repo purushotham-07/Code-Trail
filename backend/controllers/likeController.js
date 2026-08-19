@@ -14,7 +14,7 @@ export const getLikeStatus = async (req, res) => {
       req.user ? Like.exists({ snippetId: req.params.snippetId, userId: req.user.id }) : Promise.resolve(false),
     ]);
 
-    return res.json({ count, liked: Boolean(liked) });
+    return res.json({ count, likeCount: count, liked: Boolean(liked) });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -36,7 +36,7 @@ export const likeSnippet = async (req, res) => {
     );
 
     const count = await Like.countDocuments({ snippetId: snippet._id });
-    return res.json({ count, liked: true });
+    return res.json({ count, likeCount: count, liked: true });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
@@ -52,7 +52,7 @@ export const unlikeSnippet = async (req, res) => {
 
     await Like.deleteOne({ snippetId: snippet._id, userId: req.user.id });
     const count = await Like.countDocuments({ snippetId: snippet._id });
-    return res.json({ count, liked: false });
+    return res.json({ count, likeCount: count, liked: false });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
