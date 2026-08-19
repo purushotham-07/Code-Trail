@@ -362,6 +362,20 @@ export default function DashboardPage() {
         <div className="mt-8">
           <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
         </div>
+
+        <footer className="mt-12 py-6 text-center text-xs text-slate-400 dark:text-slate-500 border-t border-slate-200/60 dark:border-slate-800/60">
+          <p className="text-[11px]">
+            CodeTrail • Developed by{' '}
+            <a
+              href="https://github.com/purushotham-07"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors underline decoration-slate-300 dark:decoration-slate-700 underline-offset-2"
+            >
+              Purushotham
+            </a>
+          </p>
+        </footer>
       </main>
     </div>
   );

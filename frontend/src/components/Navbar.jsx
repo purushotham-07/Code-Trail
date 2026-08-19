@@ -79,6 +79,15 @@ export default function Navbar() {
         </div>
 
         <div className="hidden items-center gap-2.5 md:flex">
+          <a
+            href="https://github.com/purushotham-07"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden lg:inline text-[11px] text-slate-400 dark:text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors mr-1"
+          >
+            by Purushotham
+          </a>
+
           {/* Theme Toggle (Dark & Light) */}
           <button
             type="button"

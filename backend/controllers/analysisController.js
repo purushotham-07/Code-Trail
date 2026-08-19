@@ -383,19 +383,34 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
       }
 
       // For loop check
-      const forMatch = lineText.match(/for\s*\((.*?)\)/);
+      const forMatch = lineText.match(/\bfor\s*\(/);
       if (forMatch && !lineText.includes(':')) {
-        const header = forMatch[1];
-        const semicolons = (header.match(/;/g) || []).length;
-        if (semicolons < 2) {
-          issues.push({
-            title: 'Syntax error in for-loop header',
-            severity: 'Critical',
-            line: lineNum,
-            column: lineText.indexOf('for') + 1,
-            description: "3-part for loop requires semicolons: for (init; condition; increment).",
-            fix: "Replace commas with semicolons in for-loop header.",
-          });
+        const startParen = lineText.indexOf('(', forMatch.index);
+        let depth = 0;
+        let endParen = -1;
+        for (let i = startParen; i < lineText.length; i += 1) {
+          if (lineText[i] === '(') depth += 1;
+          else if (lineText[i] === ')') {
+            depth -= 1;
+            if (depth === 0) {
+              endParen = i;
+              break;
+            }
+          }
+        }
+        if (endParen !== -1) {
+          const header = lineText.slice(startParen + 1, endParen);
+          const semicolons = (header.match(/;/g) || []).length;
+          if (semicolons < 2 && !header.includes(':')) {
+            issues.push({
+              title: 'Syntax error in for-loop header',
+              severity: 'Critical',
+              line: lineNum,
+              column: lineText.indexOf('for') + 1,
+              description: '3-part for loop requires semicolons: for (init; condition; increment).',
+              fix: 'Replace commas with semicolons in for-loop header.',
+            });
+          }
         }
       }
     });
@@ -419,18 +434,36 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
         });
       }
 
-      const forMatch = lineText.match(/for\s*\(\s*(?:let|var|const)\s+([^;)]+)\)/);
+      const forMatch = lineText.match(/\bfor\s*\(/);
       if (forMatch && !lineText.includes(' of ') && !lineText.includes(' in ')) {
-        const semicolons = (forMatch[0].match(/;/g) || []).length;
-        if (semicolons < 2) {
-          issues.push({
-            title: 'Syntax error in for loop header',
-            severity: 'Critical',
-            line: lineNum,
-            column: lineText.indexOf('for') + 1,
-            description: '3-part for loop requires semicolons: for (init; cond; update).',
-            fix: 'Add the missing semicolon between condition and increment.',
-          });
+        const startParen = lineText.indexOf('(', forMatch.index);
+        let depth = 0;
+        let endParen = -1;
+        for (let i = startParen; i < lineText.length; i += 1) {
+          if (lineText[i] === '(') depth += 1;
+          else if (lineText[i] === ')') {
+            depth -= 1;
+            if (depth === 0) {
+              endParen = i;
+              break;
+            }
+          }
+        }
+        if (endParen !== -1) {
+          const header = lineText.slice(startParen + 1, endParen);
+          if (!header.includes(' of ') && !header.includes(' in ')) {
+            const semicolons = (header.match(/;/g) || []).length;
+            if (semicolons < 2) {
+              issues.push({
+                title: 'Syntax error in for loop header',
+                severity: 'Critical',
+                line: lineNum,
+                column: lineText.indexOf('for') + 1,
+                description: '3-part for loop requires semicolons: for (init; cond; update).',
+                fix: 'Add the missing semicolon between condition and increment.',
+              });
+            }
+          }
         }
       }
     });
