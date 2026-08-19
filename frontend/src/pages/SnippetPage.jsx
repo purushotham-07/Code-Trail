@@ -86,6 +86,10 @@ export default function SnippetPage() {
   const [editSqlSchema, setEditSqlSchema] = useState('');
   const [savingDetails, setSavingDetails] = useState(false);
 
+  // Delete Problem state
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingSnippet, setDeletingSnippet] = useState(false);
+
   // Error & Social state
   const [error, setError] = useState('');
   const [likeCount, setLikeCount] = useState(0);
@@ -335,6 +339,22 @@ export default function SnippetPage() {
       setError(err.response?.data?.message || 'Failed to update problem details.');
     } finally {
       setSavingDetails(false);
+    }
+  };
+
+  // Handle Delete Entire Problem / Snippet
+  const handleDeleteSnippet = async () => {
+    if (!isOwner || deletingSnippet) return;
+    setDeletingSnippet(true);
+    setError('');
+    try {
+      await api.delete(`/snippets/${id}`);
+      setShowDeleteModal(false);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete problem.');
+    } finally {
+      setDeletingSnippet(false);
     }
   };
 
@@ -618,6 +638,22 @@ export default function SnippetPage() {
             >
               Fork
             </button>
+
+            {/* Delete Problem (Owner only) */}
+            {isOwner && (
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(true)}
+                className="flex items-center gap-1.5 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30 px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors"
+                title="Delete this problem permanently"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
+                <span>Delete</span>
+              </button>
+            )}
 
             {/* Save New Version Button */}
             {isOwner ? (
@@ -1462,23 +1498,92 @@ export default function SnippetPage() {
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2">
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-[#333333]">
                   <button
                     type="button"
-                    onClick={() => setShowEditDetailsModal(false)}
-                    className="rounded border border-slate-200 dark:border-[#404040] px-3 py-1.5 font-medium hover:bg-slate-100 dark:hover:bg-[#333333]"
+                    onClick={() => {
+                      setShowEditDetailsModal(false);
+                      setShowDeleteModal(true);
+                    }}
+                    className="text-xs text-rose-600 dark:text-rose-400 hover:underline font-semibold"
                   >
-                    Cancel
+                    Delete Problem
                   </button>
-                  <button
-                    type="submit"
-                    disabled={savingDetails}
-                    className="rounded bg-blue-600 px-4 py-1.5 font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
-                  >
-                    {savingDetails ? 'Saving…' : 'Save Changes'}
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowEditDetailsModal(false)}
+                      className="rounded border border-slate-200 dark:border-[#404040] px-3 py-1.5 font-medium hover:bg-slate-100 dark:hover:bg-[#333333]"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={savingDetails}
+                      className="rounded bg-blue-600 px-4 py-1.5 font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                    >
+                      {savingDetails ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  </div>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DELETE PROBLEM CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md rounded-xl border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-[#262626] p-5 shadow-2xl space-y-4 text-xs text-slate-800 dark:text-slate-200"
+            >
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Delete Problem</h3>
+                  <p className="text-[11px] text-slate-500">This action cannot be undone.</p>
+                </div>
+              </div>
+
+              <p className="text-slate-700 dark:text-slate-300 leading-relaxed">
+                Are you sure you want to permanently delete <span className="font-bold text-slate-900 dark:text-white">"{snippet.title}"</span>? All {versions.length} version histories, community comments, and reviews will be permanently removed.
+              </p>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100 dark:border-[#333333]">
+                <button
+                  type="button"
+                  onClick={() => setShowDeleteModal(false)}
+                  disabled={deletingSnippet}
+                  className="rounded-lg border border-slate-200 dark:border-[#404040] px-3.5 py-1.5 font-medium hover:bg-slate-100 dark:hover:bg-[#333333]"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeleteSnippet}
+                  disabled={deletingSnippet}
+                  className="rounded-lg bg-rose-600 px-4 py-1.5 font-semibold text-white hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                >
+                  {deletingSnippet ? (
+                    <>
+                      <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                      <span>Deleting…</span>
+                    </>
+                  ) : (
+                    <span>Delete Permanently</span>
+                  )}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
