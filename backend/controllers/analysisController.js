@@ -329,7 +329,9 @@ Analyze this ${language} code for the problem: "${problemStatement || 'Algorithm
 Target Time: ${targetTime || 'Optimal'}, Target Space: ${targetSpace || 'Optimal'}.
 
 Tasks:
-1. Check for syntax/compilation errors. Set "hasSyntaxErrors": true/false. If errors exist, list in "syntaxErrors" [{ "title": "...", "line": 1, "description": "...", "fix": "..." }].
+1. Check for real syntax/compilation bugs (e.g. mismatched braces, missing return, invalid operators, bad loops).
+   CRITICAL PLATFORM RULE: DO NOT flag missing imports, missing packages, or missing #include headers (e.g. java.util.*, Map, List, Queue, Stack, vector, string, heapq, collections, etc.) as errors. All standard libraries and collections are globally available in this coding platform environment.
+   If real syntax errors exist, set "hasSyntaxErrors": true and list in "syntaxErrors" [{ "title": "...", "line": 1, "description": "...", "fix": "..." }]. Otherwise set "hasSyntaxErrors": false and "syntaxErrors": [].
 2. Evaluate actual "timeComplexity" (e.g. "O(n^2)") and "spaceComplexity" (e.g. "O(1)") of this current code.
 3. State "currentApproach": 1-2 sentences explaining what approach the current code followed.
 4. State "recommendedApproach": 1-2 sentences explaining what approach should be followed to achieve the target complexity (${targetTime || 'Optimal'} time, ${targetSpace || 'Optimal'} space).
@@ -524,8 +526,21 @@ export const analyzeSnippetCode = async (req, res) => {
       combinedIssuesMap.set(`${line}-${formatted.title}`, formatted);
     });
 
-    const formattedIssues = Array.from(combinedIssuesMap.values());
-    const hasSyntaxErrors = Boolean(parsed.hasSyntaxErrors) || formattedIssues.length > 0;
+    const isImportOrLibraryError = (issue) => {
+      const text = `${issue?.title || ''} ${issue?.description || ''} ${issue?.fix || ''}`.toLowerCase();
+      return (
+        text.includes('import') ||
+        text.includes('#include') ||
+        text.includes('header file') ||
+        text.includes('missing package') ||
+        (text.includes('cannot find symbol') && (text.includes('map') || text.includes('list') || text.includes('vector') || text.includes('queue') || text.includes('set') || text.includes('stack') || text.includes('deque') || text.includes('heapq'))) ||
+        text.includes('not imported') ||
+        (text.includes('undeclared identifier') && (text.includes('vector') || text.includes('string') || text.includes('pair') || text.includes('map') || text.includes('set') || text.includes('unordered_map') || text.includes('queue') || text.includes('stack')))
+      );
+    };
+
+    const formattedIssues = Array.from(combinedIssuesMap.values()).filter((issue) => !isImportOrLibraryError(issue));
+    const hasSyntaxErrors = formattedIssues.length > 0;
     const errorLineNumbers = extractErrorLinesFromIssues(formattedIssues);
 
     const actualTime = parsed.timeComplexity || '';
