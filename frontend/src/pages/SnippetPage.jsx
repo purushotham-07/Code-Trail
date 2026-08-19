@@ -6,6 +6,7 @@ import DiffViewer from '../components/DiffViewer.jsx';
 import { CodeEditorSkeleton } from '../components/LoadingSkeleton.jsx';
 import Navbar from '../components/Navbar.jsx';
 import VersionHistory from '../components/VersionHistory.jsx';
+import DsaStudentToolkit from '../components/DsaStudentToolkit.jsx';
 import api from '../services/api.js';
 import { useAuth } from '../store/AuthContext.jsx';
 import {
@@ -777,6 +778,20 @@ export default function SnippetPage() {
                   </button>
                 )}
 
+                {!isSql && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewTab('toolkit')}
+                    className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                      activeViewTab === 'toolkit'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-400 hover:text-blue-300'
+                    }`}
+                  >
+                    Student Toolkit
+                  </button>
+                )}
+
                 {isSql && snippet.sqlSchema && (
                   <button
                     type="button"
@@ -935,6 +950,9 @@ export default function SnippetPage() {
                   </div>
                 </div>
               </div>
+            ) : activeViewTab === 'toolkit' && !isSql ? (
+              /* VIEW: DSA Student Toolkit (4-Lang Syntax, Constraint Calculator, Pattern Tree) */
+              <DsaStudentToolkit />
             ) : activeViewTab === 'schema' && isSql ? (
               /* VIEW 4: SQL Mock Schema Viewer */
               <div className="rounded-xl border border-emerald-900/50 bg-slate-900 p-4 space-y-3">

@@ -3,6 +3,7 @@ import { lazy, Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar.jsx';
+import DsaStudentToolkit from '../components/DsaStudentToolkit.jsx';
 import api from '../services/api.js';
 import { useAuth } from '../store/AuthContext.jsx';
 import {
@@ -29,6 +30,7 @@ export default function CreatePage() {
   const [sqlSchema, setSqlSchema] = useState(DEFAULT_MOCK_SQL_SCHEMA);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [showToolkit, setShowToolkit] = useState(false);
 
   const {
     register,
@@ -384,18 +386,36 @@ export default function CreatePage() {
 
           {/* Solution Code Editor */}
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
                 {domain === 'dsa' ? `Solution Code (${selectedLanguage})` : 'SQL Query'}
               </label>
-              <button
-                type="button"
-                onClick={insertBoilerplate}
-                className="text-xs text-blue-400 hover:text-blue-300"
-              >
-                Insert Starter Template
-              </button>
+              <div className="flex items-center gap-3">
+                {domain === 'dsa' && (
+                  <button
+                    type="button"
+                    onClick={() => setShowToolkit((prev) => !prev)}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                  >
+                    {showToolkit ? 'Hide Student Toolkit' : 'Open Student Toolkit'}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={insertBoilerplate}
+                  className="text-xs text-blue-400 hover:text-blue-300"
+                >
+                  Insert Starter Template
+                </button>
+              </div>
             </div>
+
+            {showToolkit && domain === 'dsa' && (
+              <div className="mb-3">
+                <DsaStudentToolkit onClose={() => setShowToolkit(false)} />
+              </div>
+            )}
+
             <Suspense fallback={<div className="rounded-xl border border-slate-800 bg-slate-900 p-10 text-sm text-slate-400">Loading editor…</div>}>
               <CodeEditor
                 value={code}
