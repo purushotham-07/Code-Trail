@@ -1,14 +1,14 @@
 // Canonical language definitions and taxonomies for DSA & SQL Platform
 
 export const DSA_LANGUAGES = [
-  { id: 'python', label: 'Python 3', ext: 'py', icon: '🐍', color: '#3572A5' },
-  { id: 'java', label: 'Java', ext: 'java', icon: '☕', color: '#b07219' },
-  { id: 'cpp', label: 'C++', ext: 'cpp', icon: '⚡', color: '#f34b7d' },
-  { id: 'javascript', label: 'JavaScript', ext: 'js', icon: '🟨', color: '#f1e05a' },
+  { id: 'python', label: 'Python 3', ext: 'py', color: '#3572A5' },
+  { id: 'java', label: 'Java', ext: 'java', color: '#b07219' },
+  { id: 'cpp', label: 'C++', ext: 'cpp', color: '#f34b7d' },
+  { id: 'javascript', label: 'JavaScript', ext: 'js', color: '#f1e05a' },
 ];
 
 export const SQL_LANGUAGES = [
-  { id: 'sql', label: 'SQL', ext: 'sql', icon: '🗄️', color: '#e38c00' },
+  { id: 'sql', label: 'SQL', ext: 'sql', color: '#e38c00' },
 ];
 
 export const ALL_SUPPORTED_LANGUAGES = [
@@ -61,6 +61,40 @@ export const SQL_DIALECTS = [
   { id: 'sqlite', label: 'SQLite' },
 ];
 
+// Student mastery cheat sheet for common DSA patterns
+export const DSA_PATTERN_GUIDE = {
+  'Two Pointers': {
+    invariant: 'Use two indices moving towards each other or in the same direction to eliminate nested scanning.',
+    bestFor: 'Sorted arrays, pair sums, palindrome verification, partition problems.',
+    timeSpace: 'Time: O(N), Space: O(1)',
+  },
+  'Sliding Window': {
+    invariant: 'Maintain a valid window [L, R] of elements; expand R and conditionally shrink L.',
+    bestFor: 'Subarrays/substrings with length or sum constraints, unique character windows.',
+    timeSpace: 'Time: O(N), Space: O(K) where K is unique elements',
+  },
+  'Stack & Monotonic Stack': {
+    invariant: 'Maintain elements in monotonic ascending or descending order to find next greater/smaller elements in linear time.',
+    bestFor: 'Daily temperatures, histogram max rectangle, bracket matching, stock span.',
+    timeSpace: 'Time: O(N), Space: O(N)',
+  },
+  'Binary Search': {
+    invariant: 'Reduce search space by half at each step by comparing target with midpoint.',
+    bestFor: 'Sorted collections, monotonic search spaces, minimize maximum problems.',
+    timeSpace: 'Time: O(log N), Space: O(1)',
+  },
+  'Dynamic Programming': {
+    invariant: 'Express solution as recurrence relation over overlapping subproblems with optimal substructure.',
+    bestFor: 'Counting paths, min/max cost optimization, knapsack, subset partitions.',
+    timeSpace: 'Time: O(N * M), Space: O(N * M) or compressed to O(M)',
+  },
+  'Heap & Priority Queue': {
+    invariant: 'Maintain a partial ordering where root is always min or max in logarithmic insertions.',
+    bestFor: 'Top K frequent, merge K sorted lists, median of stream, shortest path Dijkstra.',
+    timeSpace: 'Time: O(N log K), Space: O(K)',
+  },
+};
+
 export const STARTER_BOILERPLATES = {
   python: `class Solution:
     def solve(self, nums: list[int], target: int) -> list[int]:
@@ -68,7 +102,6 @@ export const STARTER_BOILERPLATES = {
         Time Complexity: O(n)
         Space Complexity: O(n)
         """
-        # Write your algorithmic solution here
         seen = {}
         for i, num in enumerate(nums):
             complement = target - num
@@ -85,7 +118,6 @@ class Solution {
      * Space Complexity: O(n)
      */
     public int[] solve(int[] nums, int target) {
-        // Write your algorithmic solution here
         Map<Integer, Integer> map = new HashMap<>();
         for (int i = 0; i < nums.length; i++) {
             int complement = target - nums[i];
@@ -111,7 +143,6 @@ public:
      * Space Complexity: O(n)
      */
     vector<int> solve(vector<int>& nums, int target) {
-        // Write your algorithmic solution here
         unordered_map<int, int> seen;
         for (int i = 0; i < nums.size(); ++i) {
             int complement = target - nums[i];
@@ -132,7 +163,6 @@ public:
  * Space Complexity: O(n)
  */
 function solve(nums, target) {
-  // Write your algorithmic solution here
   const seen = new Map();
   for (let i = 0; i < nums.length; i++) {
     const complement = target - nums[i];

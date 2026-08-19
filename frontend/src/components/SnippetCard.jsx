@@ -2,13 +2,13 @@ import { motion } from 'framer-motion';
 import { memo } from 'react';
 import { Link } from 'react-router-dom';
 
-const getLangIcon = (lang) => {
+const getLangLabel = (lang) => {
   const l = String(lang || '').toLowerCase();
-  if (l.includes('python') || l === 'py') return '🐍 Python';
-  if (l.includes('java') && !l.includes('script')) return '☕ Java';
-  if (l.includes('c++') || l.includes('cpp') || l === 'c') return '⚡ C++';
-  if (l.includes('script') || l === 'js' || l === 'ts') return '🟨 JavaScript';
-  if (l === 'sql') return '🗄️ SQL';
+  if (l.includes('python') || l === 'py') return 'Python';
+  if (l.includes('java') && !l.includes('script')) return 'Java';
+  if (l.includes('c++') || l.includes('cpp') || l === 'c') return 'C++';
+  if (l.includes('script') || l === 'js' || l === 'ts') return 'JavaScript';
+  if (l === 'sql') return 'SQL';
   return lang;
 };
 
@@ -29,10 +29,10 @@ const SnippetCard = memo(function SnippetCard({ snippet }) {
 
   return (
     <motion.article
-      initial={{ opacity: 0, y: 12 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.2 }}
-      className="group flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/90 p-5 transition-all hover:border-slate-700 hover:shadow-lg hover:shadow-blue-500/5"
+      transition={{ duration: 0.15 }}
+      className="group flex flex-col justify-between rounded-xl border border-slate-800 bg-slate-900/90 p-5 transition-all hover:border-slate-700 hover:shadow-md"
     >
       <div>
         {/* Top Badges: Domain, Difficulty, Topic & Version */}
@@ -45,7 +45,7 @@ const SnippetCard = memo(function SnippetCard({ snippet }) {
                   : 'bg-blue-600/15 text-blue-400 border-blue-500/30'
               }`}
             >
-              {isSql ? '🗄️ SQL' : '🧠 DSA'}
+              {isSql ? 'SQL' : 'DSA'}
             </span>
 
             {snippet.difficulty && (
@@ -79,11 +79,11 @@ const SnippetCard = memo(function SnippetCard({ snippet }) {
           <div className="mt-2 flex items-center gap-2 font-mono text-[11px] text-slate-400">
             <span className="text-slate-500">Target:</span>
             <span className="rounded bg-slate-950 px-1.5 py-0.5 text-blue-300 border border-slate-800">
-              ⏱ {snippet.targetTimeComplexity}
+              Time: {snippet.targetTimeComplexity}
             </span>
             {snippet.targetSpaceComplexity && (
               <span className="rounded bg-slate-950 px-1.5 py-0.5 text-indigo-300 border border-slate-800">
-                💾 {snippet.targetSpaceComplexity}
+                Space: {snippet.targetSpaceComplexity}
               </span>
             )}
           </div>
@@ -103,10 +103,10 @@ const SnippetCard = memo(function SnippetCard({ snippet }) {
         )}
       </div>
 
-      {/* Footer: Language Icon, Author, Date */}
+      {/* Footer: Language Label, Author, Date */}
       <div className="mt-4 flex items-center justify-between border-t border-slate-800/80 pt-3 text-xs text-slate-500">
-        <span className="rounded bg-slate-950 px-2 py-1 font-mono text-[11px] text-slate-300 border border-slate-800">
-          {getLangIcon(snippet.language)}
+        <span className="rounded bg-slate-950 px-2 py-0.5 font-mono text-[11px] text-slate-300 border border-slate-800">
+          {getLangLabel(snippet.language)}
         </span>
 
         <div className="flex items-center gap-2">

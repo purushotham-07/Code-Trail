@@ -34,14 +34,12 @@ export default function Navbar() {
     <nav className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <div className="flex items-center gap-6">
-          <Link to="/" className="flex items-center gap-2.5 text-lg font-bold tracking-tight text-white hover:opacity-90 transition-opacity">
-            <img src="/logo.svg" alt="CodeTrail Logo" className="h-7 w-7 rounded-md object-contain" />
-            <div className="flex items-baseline gap-1.5">
-              <span>CodeTrail</span>
-              <span className="rounded bg-blue-600/20 px-1.5 py-0.5 text-[10px] font-semibold text-blue-400 border border-blue-500/30">
-                DSA · SQL
-              </span>
-            </div>
+          <Link to="/" className="flex items-center gap-2.5 text-base font-bold tracking-tight text-white hover:opacity-90 transition-opacity">
+            <img src="/logo.svg" alt="CodeTrail Logo" className="h-6 w-6 rounded object-contain" />
+            <span className="text-slate-100">CodeTrail</span>
+            <span className="rounded bg-blue-600/20 px-1.5 py-0.5 text-[10px] font-semibold text-blue-400 border border-blue-500/30">
+              DSA & SQL
+            </span>
           </Link>
 
           <div className="hidden items-center gap-1 sm:flex">
@@ -57,23 +55,23 @@ export default function Navbar() {
             </Link>
             <Link
               to="/?domain=dsa"
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 currentDomain === 'dsa'
                   ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30 font-semibold'
                   : 'text-slate-400 hover:bg-slate-800/60 hover:text-blue-300'
               }`}
             >
-              <span>🧠</span> DSA Arena
+              DSA Arena
             </Link>
             <Link
               to="/?domain=sql"
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 currentDomain === 'sql'
                   ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 font-semibold'
                   : 'text-slate-400 hover:bg-slate-800/60 hover:text-emerald-300'
               }`}
             >
-              <span>🗄️</span> SQL Studio
+              SQL Studio
             </Link>
           </div>
         </div>
@@ -84,10 +82,7 @@ export default function Navbar() {
               to="/create"
               className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-blue-500 shadow-sm"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
+              <span>+</span>
               <span>New Problem</span>
             </Link>
           )}
@@ -130,7 +125,7 @@ export default function Navbar() {
                       onClick={() => setMenuOpen(false)}
                       className="block px-4 py-2.5 text-sm text-slate-300 transition-colors hover:bg-slate-800"
                     >
-                      Profile & My Solutions
+                      Profile & Solutions
                     </Link>
                     <button
                       type="button"
@@ -174,10 +169,10 @@ export default function Navbar() {
                 All Problems
               </Link>
               <Link to="/?domain=dsa" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm text-blue-400 hover:bg-slate-800">
-                🧠 DSA Arena (Java · Python · C++ · JS)
+                DSA Arena (Java, Python, C++, JS)
               </Link>
               <Link to="/?domain=sql" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm text-emerald-400 hover:bg-slate-800">
-                🗄️ SQL Studio
+                SQL Studio
               </Link>
               {user && (
                 <Link to="/create" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500">
@@ -187,7 +182,7 @@ export default function Navbar() {
               {user ? (
                 <>
                   <Link to="/profile" onClick={() => setMobileOpen(false)} className="rounded-md px-3 py-2 text-sm text-slate-300 hover:bg-slate-800">
-                    Profile & My Solutions
+                    Profile & Solutions
                   </Link>
                   <button type="button" onClick={handleLogout} className="rounded-md px-3 py-2 text-left text-sm text-red-400 hover:bg-slate-800">
                     Logout

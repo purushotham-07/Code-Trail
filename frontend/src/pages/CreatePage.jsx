@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { lazy, Suspense, useState, useEffect } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Navbar from '../components/Navbar.jsx';
@@ -145,9 +145,9 @@ export default function CreatePage() {
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-black text-white">Create New Problem / Solution</h1>
+            <h1 className="text-2xl font-bold text-white">Create Problem / Solution</h1>
             <p className="mt-1 text-xs text-slate-400">
-              Publish a DSA algorithmic problem or SQL query with version tracking & AI review.
+              Publish a DSA problem or SQL query with version tracking and AI analysis.
             </p>
           </div>
 
@@ -156,26 +156,26 @@ export default function CreatePage() {
             <button
               type="button"
               onClick={() => handleDomainSwitch('dsa')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
                 domain === 'dsa' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>🧠</span> DSA Problem
+              DSA Problem
             </button>
             <button
               type="button"
               onClick={() => handleDomainSwitch('sql')}
-              className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-bold transition-colors ${
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
                 domain === 'sql' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
             >
-              <span>🗄️</span> SQL Query
+              SQL Query
             </button>
           </div>
         </motion.div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4 shadow-xl">
+          <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4 shadow-md">
             {/* Title & Difficulty */}
             <div className="grid gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
@@ -217,7 +217,7 @@ export default function CreatePage() {
               {domain === 'dsa' ? (
                 <div>
                   <label htmlFor="language" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                    Primary DSA Language
+                    Primary Language
                   </label>
                   <select
                     id="language"
@@ -227,7 +227,7 @@ export default function CreatePage() {
                   >
                     {DSA_LANGUAGES.map((lang) => (
                       <option key={lang.id} value={lang.id}>
-                        {lang.icon} {lang.label}
+                        {lang.label}
                       </option>
                     ))}
                   </select>
@@ -253,7 +253,7 @@ export default function CreatePage() {
 
               <div>
                 <label htmlFor="topic" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  {domain === 'dsa' ? 'Algorithmic Pattern / Topic' : 'SQL Topic / Technique'}
+                  {domain === 'dsa' ? 'Pattern / Topic' : 'SQL Topic'}
                 </label>
                 <select
                   id="topic"
@@ -290,7 +290,7 @@ export default function CreatePage() {
                   <input
                     id="targetSpaceComplexity"
                     {...register('targetSpaceComplexity')}
-                    placeholder="e.g. O(1) auxiliary, O(n)"
+                    placeholder="e.g. O(1), O(n)"
                     className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 font-mono text-xs text-indigo-300 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
@@ -300,7 +300,7 @@ export default function CreatePage() {
             {/* Problem Statement / Constraints */}
             <div>
               <label htmlFor="problemStatement" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Problem Statement & Constraints
+                Problem Description & Constraints
               </label>
               <textarea
                 id="problemStatement"
@@ -308,8 +308,8 @@ export default function CreatePage() {
                 rows={4}
                 placeholder={
                   domain === 'dsa'
-                    ? "Paste the problem description, example inputs/outputs, and numerical constraints (e.g. 1 <= nums.length <= 10^5)..."
-                    : "Describe the SQL query objective, business requirement, or output column specifications..."
+                    ? "Problem description, example inputs/outputs, and numerical constraints..."
+                    : "SQL query objective, schema context, or expected column output..."
                 }
                 className="w-full rounded-md border border-slate-700 bg-slate-950 p-3 font-mono text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
               />
@@ -320,14 +320,14 @@ export default function CreatePage() {
               <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-3.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                    Mock Table Schema (DDL & Sample Rows)
+                    Mock Schema & Sample Data
                   </label>
                   <button
                     type="button"
                     onClick={() => setSqlSchema(DEFAULT_MOCK_SQL_SCHEMA)}
                     className="text-[11px] text-blue-400 hover:text-blue-300"
                   >
-                    Reset Default Schema
+                    Reset Example Schema
                   </button>
                 </div>
                 <textarea
@@ -349,7 +349,7 @@ export default function CreatePage() {
                 <input
                   id="tags"
                   {...register('tags')}
-                  placeholder="leetcode, amazon, dynamic-programming"
+                  placeholder="leetcode, binary-search, array"
                   className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
                 />
               </div>
@@ -362,8 +362,8 @@ export default function CreatePage() {
                   {...register('isPublic')}
                   className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
                 >
-                  <option value="true">Public (Visible to community)</option>
-                  <option value="false">Private (Only me)</option>
+                  <option value="true">Public</option>
+                  <option value="false">Private</option>
                 </select>
               </div>
             </div>
@@ -376,7 +376,7 @@ export default function CreatePage() {
               <input
                 id="commitMessage"
                 {...register('commitMessage')}
-                placeholder="e.g. Initial Brute Force O(n^2) approach"
+                placeholder="e.g. Initial solution approach"
                 className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
               />
             </div>
@@ -386,7 +386,7 @@ export default function CreatePage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                {domain === 'dsa' ? `Solution Code (${selectedLanguage})` : 'SQL Query Code'}
+                {domain === 'dsa' ? `Solution Code (${selectedLanguage})` : 'SQL Query'}
               </label>
               <button
                 type="button"
@@ -422,7 +422,7 @@ export default function CreatePage() {
               disabled={submitting}
               className="rounded-md bg-blue-600 px-6 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {submitting ? 'Publishing…' : 'Publish Problem / Solution'}
+              {submitting ? 'Publishing…' : 'Publish Problem'}
             </motion.button>
           </div>
         </form>

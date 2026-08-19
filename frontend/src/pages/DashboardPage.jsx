@@ -93,23 +93,23 @@ export default function DashboardPage() {
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-black text-white">
+              <h1 className="text-2xl font-bold text-white">
                 {domain === 'dsa'
-                  ? '🧠 DSA Arena'
+                  ? 'DSA Arena'
                   : domain === 'sql'
-                  ? '🗄️ SQL Studio'
+                  ? 'SQL Studio'
                   : 'DSA & SQL Problem Hub'}
               </h1>
               <p className="mt-1 text-xs text-slate-400">
                 {domain === 'dsa'
-                  ? 'Solve and optimize algorithms in Java, Python, C++, and JavaScript.'
+                  ? 'Algorithmic problem-solving in Java, Python, C++, and JavaScript.'
                   : domain === 'sql'
-                  ? 'Master database queries, window functions, CTEs, and execution performance.'
-                  : 'Explore, evolve, and master algorithmic and database problem solutions.'}
+                  ? 'Database query practice, window functions, CTEs, and execution optimization.'
+                  : 'Version-controlled DSA and SQL practice for technical interviews.'}
               </p>
             </div>
 
-            {/* Domain Switcher Pills */}
+            {/* Domain Switcher */}
             <div className="flex rounded-lg bg-slate-900 p-1 border border-slate-800">
               <button
                 type="button"
@@ -123,20 +123,20 @@ export default function DashboardPage() {
               <button
                 type="button"
                 onClick={() => handleDomainChange('dsa')}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
                   domain === 'dsa' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <span>🧠</span> DSA Arena
+                DSA Arena
               </button>
               <button
                 type="button"
                 onClick={() => handleDomainChange('sql')}
-                className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
                   domain === 'sql' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                <span>🗄️</span> SQL Studio
+                SQL Studio
               </button>
             </div>
           </div>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
 
         {/* Pattern & Topic Filter Chips */}
         <div className="mb-5 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mr-1">Patterns:</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mr-1">Patterns:</span>
           <button
             type="button"
             onClick={() => setSelectedTopic('')}
@@ -221,7 +221,7 @@ export default function DashboardPage() {
             <option value="">All Languages</option>
             {availableLanguages.map((l) => (
               <option key={l.id} value={l.id}>
-                {l.icon} {l.label}
+                {l.label}
               </option>
             ))}
           </select>

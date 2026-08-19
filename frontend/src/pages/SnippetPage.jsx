@@ -16,6 +16,7 @@ import {
   DIFFICULTIES,
   SQL_DIALECTS,
   DEFAULT_MOCK_SQL_SCHEMA,
+  DSA_PATTERN_GUIDE,
 } from '../utils/languages.js';
 
 function extractErrorLines(errors = []) {
@@ -95,20 +96,24 @@ export default function SnippetPage() {
   const [polyglotTranslations, setPolyglotTranslations] = useState({});
   const [translatingPolyglot, setTranslatingPolyglot] = useState(false);
 
-  // SQL Schema & Pipeline State (for SQL)
-  const [activeViewTab, setActiveViewTab] = useState('code'); // 'code' | 'schema' | 'rosetta'
-  const [activeSqlStep, setActiveSqlStep] = useState(0);
+  // SQL Schema & View Tab State
+  const [activeViewTab, setActiveViewTab] = useState('code'); // 'code' | 'schema' | 'rosetta' | 'guide'
 
-  // Active generated code tab inside AI review
-  const [activeCodeTab, setActiveCodeTab] = useState('corrected'); // 'corrected' | 'optimized'
+  // Student Mastery: Progressive Hint Unlocking (1, 2, 3)
+  const [revealedHints, setRevealedHints] = useState(new Set());
+
+  // Student Mastery: Reveal Solution on Demand
+  const [showSolutionCode, setShowSolutionCode] = useState(false);
+  const [activeCodeTab, setActiveCodeTab] = useState('optimized'); // 'optimized' | 'corrected'
   const [copiedCode, setCopiedCode] = useState(false);
+
   const [showProblemStatement, setShowProblemStatement] = useState(true);
 
   // Diff comparison states
   const [compareFrom, setCompareFrom] = useState(null);
   const [compareTo, setCompareTo] = useState(null);
 
-  // Live countdown for the AI request cooldown
+  // Live countdown for AI cooldown
   useEffect(() => {
     if (!cooldownActive) return undefined;
     const timer = setInterval(() => {
@@ -139,6 +144,15 @@ export default function SnippetPage() {
     (analysis?.issues?.length > 0) ||
     (analysis?.errors?.length > 0) ||
     (analysis?.analysisErrors?.length > 0);
+
+  const toggleHintReveal = (index) => {
+    setRevealedHints((prev) => {
+      const next = new Set(prev);
+      if (next.has(index)) next.delete(index);
+      else next.add(index);
+      return next;
+    });
+  };
 
   const loadSnippet = useCallback(async () => {
     setLoading(true);
@@ -214,6 +228,8 @@ export default function SnippetPage() {
         const code = res.data.version?.fullCode || '';
         setCurrentCode(code);
         setAnalysis(null);
+        setRevealedHints(new Set());
+        setShowSolutionCode(false);
         setCompareFrom(null);
         setCompareTo(null);
       })
@@ -305,11 +321,8 @@ export default function SnippetPage() {
       if (res.data.polyglotTranslations) {
         setPolyglotTranslations((prev) => ({ ...prev, ...res.data.polyglotTranslations }));
       }
-      if (res.data.correctedCode) {
-        setActiveCodeTab('corrected');
-      } else if (res.data.optimizedCode) {
-        setActiveCodeTab('optimized');
-      }
+      setRevealedHints(new Set());
+      setShowSolutionCode(false);
       setError('');
     } catch (err) {
       const status = err.response?.status;
@@ -410,6 +423,8 @@ export default function SnippetPage() {
     }
   };
 
+  const patternGuide = snippet?.topic ? DSA_PATTERN_GUIDE[snippet.topic] : null;
+
   if (loading) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-50">
@@ -445,7 +460,7 @@ export default function SnippetPage() {
           </div>
         )}
 
-        {/* HEADER: Title, Badges, Author & Action Buttons */}
+        {/* HEADER: Title, Clean Badges, Author & Action Buttons */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="space-y-2">
@@ -457,7 +472,7 @@ export default function SnippetPage() {
                       : 'bg-blue-600/15 text-blue-400 border-blue-500/30'
                   }`}
                 >
-                  {isSql ? '🗄️ SQL Studio' : '🧠 DSA Arena'}
+                  {isSql ? 'SQL Studio' : 'DSA Arena'}
                 </span>
 
                 {snippet.difficulty && (
@@ -477,7 +492,7 @@ export default function SnippetPage() {
                 </span>
               </div>
 
-              <h1 className="text-2xl font-black text-white">{snippet.title}</h1>
+              <h1 className="text-2xl font-bold text-white">{snippet.title}</h1>
               {snippet.description && <p className="text-xs text-slate-400">{snippet.description}</p>}
             </div>
 
@@ -492,8 +507,8 @@ export default function SnippetPage() {
                     : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800'
                 }`}
               >
-                <span>{liked ? '❤️' : '🤍'}</span>
-                <span>{likeCount}</span>
+                <span>{liked ? 'Liked' : 'Like'}</span>
+                <span>({likeCount})</span>
               </button>
 
               <button
@@ -501,7 +516,6 @@ export default function SnippetPage() {
                 onClick={handleFork}
                 className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
               >
-                <span>🔀</span>
                 <span>Fork</span>
               </button>
 
@@ -511,8 +525,7 @@ export default function SnippetPage() {
                   onClick={handleStartEdit}
                   className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"
                 >
-                  <span>✏️</span>
-                  <span>Edit / Version {snippet.currentVersion + 1}</span>
+                  <span>Edit Version {snippet.currentVersion + 1}</span>
                 </button>
               )}
             </div>
@@ -521,44 +534,43 @@ export default function SnippetPage() {
           {/* Complexity Target & Evolution Banner */}
           {(snippet.targetTimeComplexity || snippet.targetSpaceComplexity || versions.length > 1) && (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-xs">
-              {/* Target & Achieved Badges */}
               <div className="flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-1.5 font-mono text-slate-400">
-                  <span className="text-slate-500">Target:</span>
+                  <span className="text-slate-500 font-sans">Target:</span>
                   {snippet.targetTimeComplexity && (
-                    <span className="rounded bg-slate-950 px-2 py-0.5 text-blue-300 border border-slate-800 font-bold">
-                      ⏱ {snippet.targetTimeComplexity}
+                    <span className="rounded bg-slate-950 px-2 py-0.5 text-blue-300 border border-slate-800 font-semibold">
+                      Time: {snippet.targetTimeComplexity}
                     </span>
                   )}
                   {snippet.targetSpaceComplexity && (
-                    <span className="rounded bg-slate-950 px-2 py-0.5 text-indigo-300 border border-slate-800 font-bold">
-                      💾 {snippet.targetSpaceComplexity}
+                    <span className="rounded bg-slate-950 px-2 py-0.5 text-indigo-300 border border-slate-800 font-semibold">
+                      Space: {snippet.targetSpaceComplexity}
                     </span>
                   )}
                 </div>
 
                 {analysis && (
                   <div className="flex items-center gap-1.5 font-mono">
-                    <span className="text-slate-500">Achieved:</span>
-                    <span className="rounded bg-slate-950 px-2 py-0.5 text-emerald-300 border border-slate-800 font-bold">
-                      ⏱ {analysis.timeComplexity || analysis.complexity?.timeComplexity || 'Evaluated'}
+                    <span className="text-slate-500 font-sans">Evaluated:</span>
+                    <span className="rounded bg-slate-950 px-2 py-0.5 text-emerald-300 border border-slate-800 font-semibold">
+                      Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity || 'Evaluated'}
                     </span>
-                    <span className="rounded bg-slate-950 px-2 py-0.5 text-emerald-300 border border-slate-800 font-bold">
-                      💾 {analysis.spaceComplexity || analysis.complexity?.spaceComplexity || 'Evaluated'}
+                    <span className="rounded bg-slate-950 px-2 py-0.5 text-emerald-300 border border-slate-800 font-semibold">
+                      Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity || 'Evaluated'}
                     </span>
                     {analysis.targetComplexityMet && (
-                      <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/40">
-                        ✓ Target Met
+                      <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/40 font-sans">
+                        Target Met
                       </span>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Algorithmic Evolution Timeline Trail */}
+              {/* Version History Progression Trail */}
               {versions.length > 1 && (
                 <div className="flex items-center gap-1 font-mono text-[11px] text-slate-400">
-                  <span className="text-slate-500">Evolution:</span>
+                  <span className="text-slate-500 font-sans">Evolution:</span>
                   {versions.slice(-4).map((v, i, arr) => (
                     <span key={v.versionNumber} className="flex items-center gap-1">
                       <button
@@ -572,7 +584,7 @@ export default function SnippetPage() {
                       >
                         v{v.versionNumber}
                       </button>
-                      {i < arr.length - 1 && <span className="text-slate-600">➔</span>}
+                      {i < arr.length - 1 && <span className="text-slate-600 font-sans">to</span>}
                     </span>
                   ))}
                 </div>
@@ -585,14 +597,9 @@ export default function SnippetPage() {
         {!editing && snippet.problemStatement && (
           <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="flex h-6 w-6 items-center justify-center rounded bg-blue-500/10 text-blue-400 font-bold">
-                  📝
-                </span>
-                <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Problem Description & Constraints
-                </h2>
-              </div>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                Problem Description & Constraints
+              </h2>
               <button
                 type="button"
                 onClick={() => setShowProblemStatement((prev) => !prev)}
@@ -648,7 +655,7 @@ export default function SnippetPage() {
 
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">Topic / Pattern</label>
+                <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">Pattern / Topic</label>
                 <select
                   value={editTopic}
                   onChange={(e) => setEditTopic(e.target.value)}
@@ -694,7 +701,7 @@ export default function SnippetPage() {
 
             <div>
               <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">
-                Commit Message / Version Note <span className="text-rose-400">*</span>
+                Version Note <span className="text-rose-400">*</span>
               </label>
               <input
                 type="text"
@@ -729,7 +736,7 @@ export default function SnippetPage() {
         <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
           {/* LEFT: Code / Diff / Polyglot / Schema Workspace */}
           <div className="space-y-6">
-            {/* View Mode Toggle Bar (Code vs 4-Lang Polyglot Rosetta vs Mock Schema) */}
+            {/* View Mode Tabs */}
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
               <div className="flex rounded-lg bg-slate-900 p-1 border border-slate-800">
                 <button
@@ -746,13 +753,27 @@ export default function SnippetPage() {
                   <button
                     type="button"
                     onClick={() => setActiveViewTab('rosetta')}
-                    className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                    className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
                       activeViewTab === 'rosetta'
                         ? 'bg-indigo-600 text-white'
                         : 'text-slate-400 hover:text-indigo-300'
                     }`}
                   >
-                    <span>🌐</span> 4-Language Polyglot Rosetta
+                    Polyglot Rosetta (4 Languages)
+                  </button>
+                )}
+
+                {patternGuide && !isSql && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveViewTab('guide')}
+                    className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                      activeViewTab === 'guide'
+                        ? 'bg-amber-600 text-white'
+                        : 'text-slate-400 hover:text-amber-300'
+                    }`}
+                  >
+                    Pattern Guide ({snippet.topic})
                   </button>
                 )}
 
@@ -760,13 +781,13 @@ export default function SnippetPage() {
                   <button
                     type="button"
                     onClick={() => setActiveViewTab('schema')}
-                    className={`flex items-center gap-1.5 rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                    className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
                       activeViewTab === 'schema'
                         ? 'bg-emerald-600 text-white'
                         : 'text-slate-400 hover:text-emerald-300'
                     }`}
                   >
-                    <span>🗄️</span> Mock Schema Tables
+                    Schema & Tables
                   </button>
                 )}
               </div>
@@ -781,10 +802,9 @@ export default function SnippetPage() {
                     setCompareFrom(prev);
                     setCompareTo(latest);
                   }}
-                  className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300"
+                  className="text-xs text-blue-400 hover:text-blue-300 font-medium"
                 >
-                  <span>⇄</span>
-                  <span>Compare Diff</span>
+                  Compare Version Diff
                 </button>
               )}
             </div>
@@ -806,7 +826,7 @@ export default function SnippetPage() {
                         </option>
                       ))}
                     </select>
-                    <span className="text-slate-500">↔</span>
+                    <span className="text-slate-500">to</span>
                     <select
                       value={compareTo}
                       onChange={(e) => setCompareTo(Number(e.target.value))}
@@ -837,26 +857,20 @@ export default function SnippetPage() {
               /* VIEW 2: 4-Language Polyglot Rosetta View (Java, Python, C++, JS) */
               <div className="rounded-xl border border-indigo-900/50 bg-slate-900 p-4 space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600/20 text-indigo-400 font-bold">
-                      🌐
-                    </span>
-                    <div>
-                      <h3 className="text-sm font-bold text-white">4-Language Polyglot Rosetta</h3>
-                      <p className="text-[11px] text-slate-400">
-                        Compare this algorithm side-by-side across Java, Python, C++, and JavaScript.
-                      </p>
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-white">Polyglot Rosetta</h3>
+                    <p className="text-[11px] text-slate-400">
+                      Compare idiomatic implementations across Java, Python, C++, and JavaScript.
+                    </p>
                   </div>
 
                   <button
                     type="button"
                     onClick={() => handleTranslatePolyglot(activePolyglotLang)}
                     disabled={translatingPolyglot}
-                    className="flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
                   >
-                    <span>⚡</span>
-                    <span>{translatingPolyglot ? 'Translating…' : `Translate to ${activePolyglotLang}`}</span>
+                    {translatingPolyglot ? 'Translating…' : `Translate to ${activePolyglotLang}`}
                   </button>
                 </div>
 
@@ -873,10 +887,9 @@ export default function SnippetPage() {
                           : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
                       }`}
                     >
-                      <span>{l.icon}</span>
                       <span>{l.label}</span>
                       {polyglotTranslations[l.id] || (snippet.language === l.id) ? (
-                        <span className="rounded-full bg-emerald-500/20 px-1 text-[9px] text-emerald-400">✓</span>
+                        <span className="rounded bg-emerald-500/20 px-1 text-[9px] text-emerald-400 font-bold">Ready</span>
                       ) : null}
                     </button>
                   ))}
@@ -897,24 +910,42 @@ export default function SnippetPage() {
                   />
                 </div>
               </div>
-            ) : activeViewTab === 'schema' && isSql ? (
-              /* VIEW 3: SQL Mock Schema Viewer */
-              <div className="rounded-xl border border-emerald-900/50 bg-slate-900 p-4 space-y-3">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600/20 text-emerald-400 font-bold">
-                      🗄️
-                    </span>
-                    <div>
-                      <h3 className="text-sm font-bold text-white">Database Schema & Mock Records</h3>
-                      <p className="text-[11px] text-slate-400">Underlying tables and columns used in this query.</p>
-                    </div>
+            ) : activeViewTab === 'guide' && patternGuide ? (
+              /* VIEW 3: Student Pattern Guide & Mental Models */
+              <div className="rounded-xl border border-amber-900/50 bg-slate-900 p-5 space-y-4">
+                <div className="border-b border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold text-amber-300">Pattern Guide: {snippet.topic}</h3>
+                  <p className="text-xs text-slate-400 mt-0.5">Core algorithmic mental model and problem-solving blueprint.</p>
+                </div>
+
+                <div className="space-y-3 text-xs">
+                  <div className="rounded-lg bg-slate-950 p-3 border border-slate-800 space-y-1">
+                    <span className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Key Algorithmic Invariant</span>
+                    <p className="text-slate-200 leading-relaxed">{patternGuide.invariant}</p>
                   </div>
+
+                  <div className="rounded-lg bg-slate-950 p-3 border border-slate-800 space-y-1">
+                    <span className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">When to Recognize & Apply</span>
+                    <p className="text-slate-200 leading-relaxed">{patternGuide.bestFor}</p>
+                  </div>
+
+                  <div className="rounded-lg bg-slate-950 p-3 border border-slate-800 space-y-1">
+                    <span className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Expected Complexity Benchmark</span>
+                    <p className="font-mono text-emerald-300">{patternGuide.timeSpace}</p>
+                  </div>
+                </div>
+              </div>
+            ) : activeViewTab === 'schema' && isSql ? (
+              /* VIEW 4: SQL Mock Schema Viewer */
+              <div className="rounded-xl border border-emerald-900/50 bg-slate-900 p-4 space-y-3">
+                <div className="border-b border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold text-white">Database Schema & Mock Records</h3>
+                  <p className="text-[11px] text-slate-400">Underlying tables and columns used in this query.</p>
                 </div>
                 <CodeEditor value={snippet.sqlSchema || DEFAULT_MOCK_SQL_SCHEMA} language="sql" height="380px" readOnly />
               </div>
             ) : (
-              /* VIEW 4: Standard Code Editor View */
+              /* VIEW 5: Standard Code Editor View */
               <div className="space-y-3">
                 {versionLoading || !codeLoaded ? (
                   <CodeEditorSkeleton />
@@ -931,10 +962,9 @@ export default function SnippetPage() {
                     {/* Error & Issue Sidebar if errors detected */}
                     {hasErrors && (
                       <aside className="max-h-[480px] overflow-auto rounded-xl border border-rose-900/50 bg-rose-950/20 p-3.5 space-y-2.5">
-                        <div className="flex items-center gap-2 border-b border-rose-900/40 pb-2">
-                          <span className="inline-block h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                        <div className="flex items-center justify-between border-b border-rose-900/40 pb-2">
                           <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-400">
-                            Issues Detected ({analysis?.issues?.length || errorLines.length || 1})
+                            Issues ({analysis?.issues?.length || errorLines.length || 1})
                           </h3>
                         </div>
 
@@ -969,7 +999,7 @@ export default function SnippetPage() {
                                 )}
                                 {iss.fix && (
                                   <p className="mt-1.5 rounded bg-slate-950/60 p-1.5 text-[11px] text-emerald-300 font-mono">
-                                    💡 {iss.fix}
+                                    Fix: {iss.fix}
                                   </p>
                                 )}
                               </div>
@@ -993,29 +1023,24 @@ export default function SnippetPage() {
             )}
 
             {/* AI CODE REVIEW & ALGORITHMIC COACH SECTION */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-lg space-y-4">
+            <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600/20 text-blue-400 text-base">
-                    🧠
-                  </span>
-                  <div>
-                    <h2 className="text-sm font-bold text-white">
-                      {isSql ? 'SQL Query Execution & Performance Auditor' : 'AI Algorithmic Coach & Big-O Review'}
-                    </h2>
-                    <p className="text-xs text-slate-400">
-                      {isSql
-                        ? 'Clause execution pipeline, index suggestions, and query anti-patterns'
-                        : 'Big-O complexity, 3-tier hint ladder, scoring, and bug fixes'}
-                    </p>
-                  </div>
+                <div>
+                  <h2 className="text-sm font-bold text-white">
+                    {isSql ? 'SQL Execution & Performance Audit' : 'Algorithmic Complexity & Code Review'}
+                  </h2>
+                  <p className="text-xs text-slate-400">
+                    {isSql
+                      ? 'Execution pipeline, index suggestions, and query anti-patterns'
+                      : 'Big-O complexity, 3-tier progressive hints, and compiler diagnostics'}
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleAnalyze}
                   disabled={analysisLoading || cooldownActive}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
                 >
                   {analysisLoading
                     ? 'Analyzing…'
@@ -1033,18 +1058,13 @@ export default function SnippetPage() {
                   {/* Syntax & Issues Alert Card */}
                   {analysis.hasSyntaxErrors || (analysis.issues?.length > 0) ? (
                     <div className="rounded-lg border border-rose-500/50 bg-rose-950/25 p-4 space-y-3 shadow-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-6 w-6 items-center justify-center rounded bg-rose-500/20 text-rose-400 font-bold">
-                          ⚠️
-                        </span>
-                        <div>
-                          <h3 className="text-sm font-bold text-rose-300">
-                            {analysis.hasSyntaxErrors ? 'Syntax / Compiler Errors Detected' : 'Code Issues Detected'}
-                          </h3>
-                          <p className="text-xs text-rose-200/80">
-                            {analysis.issues?.length || 1} issue(s) detected in {snippet.language}.
-                          </p>
-                        </div>
+                      <div>
+                        <h3 className="text-sm font-bold text-rose-300">
+                          {analysis.hasSyntaxErrors ? 'Syntax Errors Detected' : 'Code Issues Detected'}
+                        </h3>
+                        <p className="text-xs text-rose-200/80">
+                          {analysis.issues?.length || 1} issue(s) detected in {snippet.language}.
+                        </p>
                       </div>
 
                       <div className="space-y-2 pt-1">
@@ -1077,7 +1097,7 @@ export default function SnippetPage() {
                             {iss.description && <p className="text-slate-300 leading-relaxed">{iss.description}</p>}
                             {iss.fix && (
                               <p className="rounded bg-slate-950/80 p-2 font-mono text-[11px] text-emerald-300 border border-slate-800">
-                                💡 Fix: {iss.fix}
+                                Fix: {iss.fix}
                               </p>
                             )}
                           </div>
@@ -1085,11 +1105,8 @@ export default function SnippetPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-2.5 rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 text-xs text-emerald-300">
-                      <span>✅</span>
-                      <span>
-                        <strong>Syntax Valid:</strong> Clean code with no compilation or parse errors.
-                      </span>
+                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 text-xs text-emerald-300">
+                      <strong>Syntax Valid:</strong> Clean code with no compilation or parse errors.
                     </div>
                   )}
 
@@ -1097,12 +1114,12 @@ export default function SnippetPage() {
                   <div className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-3">
                     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-600/20 border border-blue-500/30 text-lg font-black text-blue-400">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600/20 border border-blue-500/30 text-base font-bold text-blue-400">
                           {analysis.overallScore}
                           <span className="text-[10px] font-normal text-slate-400">/10</span>
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-white">Algorithmic Quality Score</h3>
+                          <h3 className="text-sm font-bold text-white">Algorithmic Quality</h3>
                           <p className="text-xs text-slate-400">
                             {analysis.category} {analysis.subCategory ? `· ${analysis.subCategory}` : ''}
                           </p>
@@ -1112,10 +1129,10 @@ export default function SnippetPage() {
                       {(analysis.timeComplexity || analysis.complexity?.timeComplexity) && (
                         <div className="flex items-center gap-2 font-mono text-xs">
                           <span className="rounded bg-slate-800 px-2.5 py-1 text-blue-300 border border-slate-700">
-                            ⏱ Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity}
+                            Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity}
                           </span>
                           <span className="rounded bg-slate-800 px-2.5 py-1 text-indigo-300 border border-slate-700">
-                            💾 Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity}
+                            Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity}
                           </span>
                         </div>
                       )}
@@ -1149,12 +1166,9 @@ export default function SnippetPage() {
                   {/* SQL Execution Order Pipeline (if SQL) */}
                   {isSql && analysis.sqlAnalysis?.clauseOrder?.length > 0 && (
                     <div className="rounded-lg border border-emerald-900/40 bg-emerald-950/15 p-4 space-y-3">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm">🔄</span>
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
-                          Logical SQL Execution Pipeline
-                        </h3>
-                      </div>
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                        Logical SQL Execution Pipeline
+                      </h3>
                       <div className="grid gap-2 sm:grid-cols-3">
                         {analysis.sqlAnalysis.clauseOrder.map((step, idx) => (
                           <div
@@ -1174,82 +1188,131 @@ export default function SnippetPage() {
                     </div>
                   )}
 
-                  {/* 3-Tier Progressive Hints (for interview prep) */}
+                  {/* 3-Tier Progressive Hints with Independent Reveal Buttons */}
                   {analysis.hints?.length > 0 && (
-                    <div className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-2.5">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                        🎯 3-Tier Progressive Hint Ladder
-                      </h3>
+                    <div className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                          Progressive Hint Ladder (Practice Mode)
+                        </h3>
+                        <span className="text-[11px] text-slate-500">
+                          {revealedHints.size} of {analysis.hints.length} revealed
+                        </span>
+                      </div>
+
                       <div className="space-y-2">
-                        {analysis.hints.map((hint, i) => (
-                          <div
-                            key={`hint-${i}`}
-                            className="flex items-start gap-2.5 rounded-md border border-slate-800/80 bg-slate-900/60 p-2.5 text-xs text-slate-300"
-                          >
-                            <span className="shrink-0 rounded bg-blue-600/20 px-2 py-0.5 text-[10px] font-bold text-blue-400">
-                              Hint {i + 1}
-                            </span>
-                            <span className="leading-relaxed">{hint}</span>
-                          </div>
-                        ))}
+                        {analysis.hints.map((hint, i) => {
+                          const isRevealed = revealedHints.has(i);
+                          return (
+                            <div
+                              key={`hint-${i}`}
+                              className="rounded-md border border-slate-800 bg-slate-900/60 p-3 text-xs space-y-1.5"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-slate-300">
+                                  Hint {i + 1} {i === 0 ? '(Intuition)' : i === 1 ? '(Data Structure)' : '(Algorithm & Edge Cases)'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleHintReveal(i)}
+                                  className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                                >
+                                  {isRevealed ? 'Hide Hint' : 'Reveal Hint'}
+                                </button>
+                              </div>
+                              {isRevealed && (
+                                <p className="text-slate-200 leading-relaxed pt-1 border-t border-slate-800">
+                                  {hint}
+                                </p>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
-                  {/* Code Generation Tabs (Corrected vs Optimized) */}
+                  {/* SOLUTION CODE: HIDDEN BY DEFAULT (Reveal on Demand) */}
                   {(analysis.correctedCode || analysis.optimizedCode) && (
-                    <div className="rounded-lg border border-slate-800 bg-slate-950 overflow-hidden">
-                      <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900 px-3 py-2">
-                        <div className="flex gap-2">
-                          {analysis.correctedCode && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveCodeTab('corrected')}
-                              className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                                activeCodeTab === 'corrected'
-                                  ? 'bg-blue-600 text-white'
-                                  : 'text-slate-400 hover:text-white'
-                              }`}
-                            >
-                              Bug-Free Corrected Code
-                            </button>
-                          )}
-                          {analysis.optimizedCode && (
-                            <button
-                              type="button"
-                              onClick={() => setActiveCodeTab('optimized')}
-                              className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                                activeCodeTab === 'optimized'
-                                  ? 'bg-emerald-600 text-white'
-                                  : 'text-slate-400 hover:text-white'
-                              }`}
-                            >
-                              Optimized Solution
-                            </button>
-                          )}
+                    <div className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                            Solution & Fix Reference
+                          </h3>
+                          <p className="text-[11px] text-slate-500">
+                            Hidden by default so you can attempt the solution first.
+                          </p>
                         </div>
 
                         <button
                           type="button"
-                          onClick={() =>
-                            handleCopyCode(
-                              activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode
-                            )
-                          }
-                          className="rounded bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
+                          onClick={() => setShowSolutionCode((prev) => !prev)}
+                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
+                            showSolutionCode
+                              ? 'bg-slate-800 text-slate-300 border-slate-700'
+                              : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500'
+                          }`}
                         >
-                          {copiedCode ? '✓ Copied' : 'Copy Solution'}
+                          {showSolutionCode ? 'Hide Solution Code' : 'Reveal Solution Code'}
                         </button>
                       </div>
 
-                      <div className="p-2">
-                        <CodeEditor
-                          value={activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode}
-                          language={snippet.language}
-                          height="260px"
-                          readOnly
-                        />
-                      </div>
+                      {showSolutionCode && (
+                        <div className="rounded-lg border border-slate-800 bg-slate-900 overflow-hidden mt-3">
+                          <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2 bg-slate-950">
+                            <div className="flex gap-2">
+                              {analysis.optimizedCode && (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveCodeTab('optimized')}
+                                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                                    activeCodeTab === 'optimized'
+                                      ? 'bg-emerald-600 text-white'
+                                      : 'text-slate-400 hover:text-white'
+                                  }`}
+                                >
+                                  Optimal Solution
+                                </button>
+                              )}
+                              {analysis.correctedCode && (
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveCodeTab('corrected')}
+                                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
+                                    activeCodeTab === 'corrected'
+                                      ? 'bg-blue-600 text-white'
+                                      : 'text-slate-400 hover:text-white'
+                                  }`}
+                                >
+                                  Corrected Code
+                                </button>
+                              )}
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleCopyCode(
+                                  activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode
+                                )
+                              }
+                              className="rounded bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
+                            >
+                              {copiedCode ? 'Copied' : 'Copy Solution'}
+                            </button>
+                          </div>
+
+                          <div className="p-2">
+                            <CodeEditor
+                              value={activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode}
+                              language={snippet.language}
+                              height="280px"
+                              readOnly
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1258,7 +1321,7 @@ export default function SnippetPage() {
 
             {/* COMMENTS SECTION */}
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
-              <h2 className="text-sm font-bold text-white">Community Discussion & Insights ({comments.length})</h2>
+              <h2 className="text-sm font-bold text-white">Discussion & Alternative Approaches ({comments.length})</h2>
 
               {user ? (
                 <form onSubmit={handleAddComment} className="space-y-2">
@@ -1317,11 +1380,9 @@ export default function SnippetPage() {
           <div className="space-y-6">
             {/* Version History Drawer */}
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Version History ({versions.length})
-                </h3>
-              </div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Version History ({versions.length})
+              </h3>
 
               <VersionHistory
                 versions={versions}
@@ -1339,7 +1400,7 @@ export default function SnippetPage() {
 
             {/* Author & Problem Details Card */}
             <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3 text-xs">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Author & Metadata</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Problem Info</h3>
               <div className="flex items-center gap-3">
                 {snippet.owner?.avatar && (
                   <img
@@ -1350,7 +1411,7 @@ export default function SnippetPage() {
                 )}
                 <div>
                   <p className="font-semibold text-white">{snippet.owner?.name || 'Developer'}</p>
-                  <p className="text-[11px] text-slate-400">Created on {new Date(snippet.createdAt).toLocaleDateString()}</p>
+                  <p className="text-[11px] text-slate-400">Created {new Date(snippet.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
