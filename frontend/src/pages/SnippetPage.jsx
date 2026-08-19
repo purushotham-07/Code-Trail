@@ -449,13 +449,13 @@ export default function SnippetPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors">
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {error && (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-rose-900/60 bg-rose-950/40 p-3 text-xs text-rose-300">
+          <div className="mb-4 flex items-center justify-between rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 shadow-sm">
             <span>{error}</span>
-            <button type="button" onClick={() => setError('')} className="text-slate-400 hover:text-white">
+            <button type="button" onClick={() => setError('')} className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
               ✕
             </button>
           </div>
@@ -469,8 +469,8 @@ export default function SnippetPage() {
                 <span
                   className={`rounded px-2.5 py-0.5 text-xs font-bold border ${
                     isSql
-                      ? 'bg-emerald-600/15 text-emerald-400 border-emerald-500/30'
-                      : 'bg-blue-600/15 text-blue-400 border-blue-500/30'
+                      ? 'bg-emerald-50 dark:bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30'
+                      : 'bg-blue-50 dark:bg-blue-600/15 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/30'
                   }`}
                 >
                   {isSql ? 'SQL Studio' : 'DSA Arena'}
@@ -483,18 +483,18 @@ export default function SnippetPage() {
                 )}
 
                 {snippet.topic && (
-                  <span className="rounded bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-300 border border-slate-700">
+                  <span className="rounded bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                     {snippet.topic}
                   </span>
                 )}
 
-                <span className="rounded bg-slate-900 px-2.5 py-0.5 font-mono text-xs text-slate-400 border border-slate-800">
+                <span className="rounded bg-slate-100 dark:bg-slate-900 px-2.5 py-0.5 font-mono text-xs text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
                   {snippet.language?.toUpperCase()}
                 </span>
               </div>
 
-              <h1 className="text-2xl font-bold text-white">{snippet.title}</h1>
-              {snippet.description && <p className="text-xs text-slate-400">{snippet.description}</p>}
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{snippet.title}</h1>
+              {snippet.description && <p className="text-xs text-slate-600 dark:text-slate-400">{snippet.description}</p>}
             </div>
 
             {/* Actions: Like, Fork, Edit */}
@@ -504,8 +504,8 @@ export default function SnippetPage() {
                 onClick={handleToggleLike}
                 className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
                   liked
-                    ? 'border-rose-500/40 bg-rose-500/15 text-rose-400'
-                    : 'border-slate-800 bg-slate-900 text-slate-300 hover:bg-slate-800'
+                    ? 'border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm'
                 }`}
               >
                 <span>{liked ? 'Liked' : 'Like'}</span>
@@ -515,7 +515,7 @@ export default function SnippetPage() {
               <button
                 type="button"
                 onClick={handleFork}
-                className="flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-800"
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm"
               >
                 <span>Fork</span>
               </button>
@@ -524,7 +524,7 @@ export default function SnippetPage() {
                 <button
                   type="button"
                   onClick={handleStartEdit}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500"
+                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 shadow-sm"
                 >
                   <span>Edit Version {snippet.currentVersion + 1}</span>
                 </button>
@@ -534,17 +534,17 @@ export default function SnippetPage() {
 
           {/* Complexity Target & Evolution Banner */}
           {(snippet.targetTimeComplexity || snippet.targetSpaceComplexity || versions.length > 1) && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900/60 p-3 text-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-3 text-xs shadow-sm">
               <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5 font-mono text-slate-400">
+                <div className="flex items-center gap-1.5 font-mono text-slate-600 dark:text-slate-400">
                   <span className="text-slate-500 font-sans">Target:</span>
                   {snippet.targetTimeComplexity && (
-                    <span className="rounded bg-slate-950 px-2 py-0.5 text-blue-300 border border-slate-800 font-semibold">
+                    <span className="rounded bg-slate-100 dark:bg-slate-950 px-2 py-0.5 text-blue-700 dark:text-blue-300 border border-slate-200 dark:border-slate-800 font-semibold">
                       Time: {snippet.targetTimeComplexity}
                     </span>
                   )}
                   {snippet.targetSpaceComplexity && (
-                    <span className="rounded bg-slate-950 px-2 py-0.5 text-indigo-300 border border-slate-800 font-semibold">
+                    <span className="rounded bg-slate-100 dark:bg-slate-950 px-2 py-0.5 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-800 font-semibold">
                       Space: {snippet.targetSpaceComplexity}
                     </span>
                   )}
@@ -553,14 +553,14 @@ export default function SnippetPage() {
                 {analysis && (
                   <div className="flex items-center gap-1.5 font-mono">
                     <span className="text-slate-500 font-sans">Evaluated:</span>
-                    <span className="rounded bg-slate-950 px-2 py-0.5 text-emerald-300 border border-slate-800 font-semibold">
+                    <span className="rounded bg-slate-100 dark:bg-slate-950 px-2 py-0.5 text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-slate-800 font-semibold">
                       Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity || 'Evaluated'}
                     </span>
-                    <span className="rounded bg-slate-950 px-2 py-0.5 text-emerald-300 border border-slate-800 font-semibold">
+                    <span className="rounded bg-slate-100 dark:bg-slate-950 px-2 py-0.5 text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-slate-800 font-semibold">
                       Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity || 'Evaluated'}
                     </span>
                     {analysis.targetComplexityMet && (
-                      <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-400 border border-emerald-500/40 font-sans">
+                      <span className="rounded bg-emerald-50 dark:bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-sans">
                         Target Met
                       </span>
                     )}
@@ -570,7 +570,7 @@ export default function SnippetPage() {
 
               {/* Version History Progression Trail */}
               {versions.length > 1 && (
-                <div className="flex items-center gap-1 font-mono text-[11px] text-slate-400">
+                <div className="flex items-center gap-1 font-mono text-[11px] text-slate-600 dark:text-slate-400">
                   <span className="text-slate-500 font-sans">Evolution:</span>
                   {versions.slice(-4).map((v, i, arr) => (
                     <span key={v.versionNumber} className="flex items-center gap-1">
@@ -580,12 +580,12 @@ export default function SnippetPage() {
                         className={`rounded px-1.5 py-0.5 ${
                           selectedVersion === v.versionNumber
                             ? 'bg-blue-600 text-white font-bold'
-                            : 'bg-slate-950 text-slate-400 hover:text-white'
+                            : 'bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
                         v{v.versionNumber}
                       </button>
-                      {i < arr.length - 1 && <span className="text-slate-600 font-sans">to</span>}
+                      {i < arr.length - 1 && <span className="text-slate-400 dark:text-slate-600 font-sans">to</span>}
                     </span>
                   ))}
                 </div>
@@ -596,21 +596,21 @@ export default function SnippetPage() {
 
         {/* Problem Statement Card (Collapsible) */}
         {!editing && snippet.problemStatement && (
-          <div className="mb-6 rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-sm">
+          <div className="mb-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-4 shadow-sm">
             <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
                 Problem Description & Constraints
               </h2>
               <button
                 type="button"
                 onClick={() => setShowProblemStatement((prev) => !prev)}
-                className="text-xs text-blue-400 hover:text-blue-300"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
               >
                 {showProblemStatement ? 'Hide Description' : 'Show Description'}
               </button>
             </div>
             {showProblemStatement && (
-              <p className="mt-3 whitespace-pre-wrap font-mono text-xs text-slate-300 leading-relaxed bg-slate-950 p-3.5 rounded-lg border border-slate-800">
+              <p className="mt-3 whitespace-pre-wrap font-mono text-xs text-slate-800 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800">
                 {snippet.problemStatement}
               </p>
             )}
@@ -738,13 +738,13 @@ export default function SnippetPage() {
           {/* LEFT: Code / Diff / Polyglot / Schema Workspace */}
           <div className="space-y-6">
             {/* View Mode Tabs */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">
-              <div className="flex rounded-lg bg-slate-900 p-1 border border-slate-800">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+              <div className="flex rounded-lg bg-white dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-800 shadow-sm">
                 <button
                   type="button"
                   onClick={() => setActiveViewTab('code')}
                   className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                    activeViewTab === 'code' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'
+                    activeViewTab === 'code' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   Code (v{selectedVersion || snippet.currentVersion})
@@ -756,8 +756,8 @@ export default function SnippetPage() {
                     onClick={() => setActiveViewTab('rosetta')}
                     className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
                       activeViewTab === 'rosetta'
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-400 hover:text-indigo-300'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300'
                     }`}
                   >
                     Polyglot Rosetta (4 Languages)
@@ -770,8 +770,8 @@ export default function SnippetPage() {
                     onClick={() => setActiveViewTab('guide')}
                     className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
                       activeViewTab === 'guide'
-                        ? 'bg-amber-600 text-white'
-                        : 'text-slate-400 hover:text-amber-300'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-300'
                     }`}
                   >
                     Pattern Guide ({snippet.topic})
@@ -784,8 +784,8 @@ export default function SnippetPage() {
                     onClick={() => setActiveViewTab('toolkit')}
                     className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
                       activeViewTab === 'toolkit'
-                        ? 'bg-blue-600 text-white'
-                        : 'text-slate-400 hover:text-blue-300'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300'
                     }`}
                   >
                     Student Toolkit
@@ -798,8 +798,8 @@ export default function SnippetPage() {
                     onClick={() => setActiveViewTab('schema')}
                     className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
                       activeViewTab === 'schema'
-                        ? 'bg-emerald-600 text-white'
-                        : 'text-slate-400 hover:text-emerald-300'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300'
                     }`}
                   >
                     Schema & Tables
@@ -817,7 +817,7 @@ export default function SnippetPage() {
                     setCompareFrom(prev);
                     setCompareTo(latest);
                   }}
-                  className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
                 >
                   Compare Version Diff
                 </button>
@@ -827,13 +827,13 @@ export default function SnippetPage() {
             {/* VIEW 1: VS Code Version Diff View */}
             {compareFrom && compareTo ? (
               <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-800 bg-slate-900 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm">
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-slate-300">Comparing:</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-300">Comparing:</span>
                     <select
                       value={compareFrom}
                       onChange={(e) => setCompareFrom(Number(e.target.value))}
-                      className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+                      className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-xs text-slate-900 dark:text-slate-200"
                     >
                       {versions.map((v) => (
                         <option key={`from-${v.versionNumber}`} value={v.versionNumber}>
@@ -841,11 +841,11 @@ export default function SnippetPage() {
                         </option>
                       ))}
                     </select>
-                    <span className="text-slate-500">to</span>
+                    <span className="text-slate-400 dark:text-slate-500">to</span>
                     <select
                       value={compareTo}
                       onChange={(e) => setCompareTo(Number(e.target.value))}
-                      className="rounded border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-slate-200"
+                      className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-xs text-slate-900 dark:text-slate-200"
                     >
                       {versions.map((v) => (
                         <option key={`to-${v.versionNumber}`} value={v.versionNumber}>
@@ -860,7 +860,7 @@ export default function SnippetPage() {
                       setCompareFrom(null);
                       setCompareTo(null);
                     }}
-                    className="rounded bg-slate-800 px-3 py-1 text-xs text-slate-300 hover:bg-slate-700"
+                    className="rounded bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
                   >
                     Close Diff
                   </button>
@@ -870,11 +870,11 @@ export default function SnippetPage() {
               </div>
             ) : activeViewTab === 'rosetta' && !isSql ? (
               /* VIEW 2: 4-Language Polyglot Rosetta View (Java, Python, C++, JS) */
-              <div className="rounded-xl border border-indigo-900/50 bg-slate-900 p-4 space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+              <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-white dark:bg-slate-900 p-4 space-y-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
                   <div>
-                    <h3 className="text-sm font-bold text-white">Polyglot Rosetta</h3>
-                    <p className="text-[11px] text-slate-400">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Polyglot Rosetta</h3>
+                    <p className="text-[11px] text-slate-600 dark:text-slate-400">
                       Compare idiomatic implementations across Java, Python, C++, and JavaScript.
                     </p>
                   </div>
@@ -883,7 +883,7 @@ export default function SnippetPage() {
                     type="button"
                     onClick={() => handleTranslatePolyglot(activePolyglotLang)}
                     disabled={translatingPolyglot}
-                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
                   >
                     {translatingPolyglot ? 'Translating…' : `Translate to ${activePolyglotLang}`}
                   </button>
@@ -899,12 +899,12 @@ export default function SnippetPage() {
                       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
                         activePolyglotLang === l.id
                           ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                          : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                          : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-white'
                       }`}
                     >
                       <span>{l.label}</span>
                       {polyglotTranslations[l.id] || (snippet.language === l.id) ? (
-                        <span className="rounded bg-emerald-500/20 px-1 text-[9px] text-emerald-400 font-bold">Ready</span>
+                        <span className="rounded bg-emerald-100 dark:bg-emerald-500/20 px-1 text-[9px] text-emerald-700 dark:text-emerald-400 font-bold">Ready</span>
                       ) : null}
                     </button>
                   ))}
@@ -927,26 +927,26 @@ export default function SnippetPage() {
               </div>
             ) : activeViewTab === 'guide' && patternGuide ? (
               /* VIEW 3: Student Pattern Guide & Mental Models */
-              <div className="rounded-xl border border-amber-900/50 bg-slate-900 p-5 space-y-4">
-                <div className="border-b border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold text-amber-300">Pattern Guide: {snippet.topic}</h3>
-                  <p className="text-xs text-slate-400 mt-0.5">Core algorithmic mental model and problem-solving blueprint.</p>
+              <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm">
+                <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold text-amber-700 dark:text-amber-300">Pattern Guide: {snippet.topic}</h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Core algorithmic mental model and problem-solving blueprint.</p>
                 </div>
 
                 <div className="space-y-3 text-xs">
-                  <div className="rounded-lg bg-slate-950 p-3 border border-slate-800 space-y-1">
-                    <span className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Key Algorithmic Invariant</span>
-                    <p className="text-slate-200 leading-relaxed">{patternGuide.invariant}</p>
+                  <div className="rounded-lg bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">Key Algorithmic Invariant</span>
+                    <p className="text-slate-800 dark:text-slate-200 leading-relaxed">{patternGuide.invariant}</p>
                   </div>
 
-                  <div className="rounded-lg bg-slate-950 p-3 border border-slate-800 space-y-1">
-                    <span className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">When to Recognize & Apply</span>
-                    <p className="text-slate-200 leading-relaxed">{patternGuide.bestFor}</p>
+                  <div className="rounded-lg bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">When to Recognize & Apply</span>
+                    <p className="text-slate-800 dark:text-slate-200 leading-relaxed">{patternGuide.bestFor}</p>
                   </div>
 
-                  <div className="rounded-lg bg-slate-950 p-3 border border-slate-800 space-y-1">
-                    <span className="font-semibold text-slate-300 uppercase tracking-wider text-[10px]">Expected Complexity Benchmark</span>
-                    <p className="font-mono text-emerald-300">{patternGuide.timeSpace}</p>
+                  <div className="rounded-lg bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800 space-y-1">
+                    <span className="font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">Expected Complexity Benchmark</span>
+                    <p className="font-mono text-emerald-700 dark:text-emerald-300 font-semibold">{patternGuide.timeSpace}</p>
                   </div>
                 </div>
               </div>
@@ -955,10 +955,10 @@ export default function SnippetPage() {
               <DsaStudentToolkit />
             ) : activeViewTab === 'schema' && isSql ? (
               /* VIEW 4: SQL Mock Schema Viewer */
-              <div className="rounded-xl border border-emerald-900/50 bg-slate-900 p-4 space-y-3">
-                <div className="border-b border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold text-white">Database Schema & Mock Records</h3>
-                  <p className="text-[11px] text-slate-400">Underlying tables and columns used in this query.</p>
+              <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-sm">
+                <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Database Schema & Mock Records</h3>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-400">Underlying tables and columns used in this query.</p>
                 </div>
                 <CodeEditor value={snippet.sqlSchema || DEFAULT_MOCK_SQL_SCHEMA} language="sql" height="380px" readOnly />
               </div>
@@ -979,9 +979,9 @@ export default function SnippetPage() {
 
                     {/* Error & Issue Sidebar if errors detected */}
                     {hasErrors && (
-                      <aside className="max-h-[480px] overflow-auto rounded-xl border border-rose-900/50 bg-rose-950/20 p-3.5 space-y-2.5">
-                        <div className="flex items-center justify-between border-b border-rose-900/40 pb-2">
-                          <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-400">
+                      <aside className="max-h-[480px] overflow-auto rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 p-3.5 space-y-2.5 shadow-sm">
+                        <div className="flex items-center justify-between border-b border-rose-200 dark:border-rose-900/40 pb-2">
+                          <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">
                             Issues ({analysis?.issues?.length || errorLines.length || 1})
                           </h3>
                         </div>
@@ -991,7 +991,7 @@ export default function SnippetPage() {
                             analysis.issues.map((iss, index) => (
                               <div
                                 key={`iss-${index}`}
-                                className="rounded-lg border border-rose-900/40 bg-rose-950/40 p-2.5 text-xs"
+                                className="rounded-lg border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-rose-950/40 p-2.5 text-xs shadow-sm"
                               >
                                 <div className="flex items-center justify-between gap-1 mb-1">
                                   <span
@@ -1000,23 +1000,23 @@ export default function SnippetPage() {
                                         ? 'bg-rose-600 text-white'
                                         : iss.severity === 'High'
                                         ? 'bg-orange-600 text-white'
-                                        : 'bg-amber-600 text-slate-900'
+                                        : 'bg-amber-500 text-slate-950'
                                     }`}
                                   >
                                     {iss.severity}
                                   </span>
                                   {iss.line && (
-                                    <span className="font-mono text-[10px] text-rose-300">
+                                    <span className="font-mono text-[10px] text-rose-700 dark:text-rose-300 font-semibold">
                                       Line {iss.line}
                                     </span>
                                   )}
                                 </div>
-                                <p className="font-semibold text-rose-200">{iss.title}</p>
+                                <p className="font-semibold text-rose-900 dark:text-rose-200">{iss.title}</p>
                                 {iss.description && (
-                                  <p className="mt-1 text-slate-300 leading-snug">{iss.description}</p>
+                                  <p className="mt-1 text-slate-700 dark:text-slate-300 leading-snug">{iss.description}</p>
                                 )}
                                 {iss.fix && (
-                                  <p className="mt-1.5 rounded bg-slate-950/60 p-1.5 text-[11px] text-emerald-300 font-mono">
+                                  <p className="mt-1.5 rounded bg-slate-50 dark:bg-slate-950/60 p-1.5 text-[11px] text-emerald-700 dark:text-emerald-300 font-mono border border-slate-200 dark:border-slate-800">
                                     Fix: {iss.fix}
                                   </p>
                                 )}
@@ -1026,7 +1026,7 @@ export default function SnippetPage() {
                             (analysis?.errors || analysis?.analysisErrors || []).map((errText, index) => (
                               <div
                                 key={`err-${index}`}
-                                className="rounded-lg border border-rose-900/40 bg-rose-950/40 p-2.5 text-xs text-rose-200"
+                                className="rounded-lg border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-rose-950/40 p-2.5 text-xs text-rose-700 dark:text-rose-200 shadow-sm"
                               >
                                 {errText}
                               </div>
@@ -1041,13 +1041,13 @@ export default function SnippetPage() {
             )}
 
             {/* AI CODE REVIEW & ALGORITHMIC COACH SECTION */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-4">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-4">
                 <div>
-                  <h2 className="text-sm font-bold text-white">
+                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">
                     {isSql ? 'SQL Execution & Performance Audit' : 'Algorithmic Complexity & Code Review'}
                   </h2>
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
                     {isSql
                       ? 'Execution pipeline, index suggestions, and query anti-patterns'
                       : 'Big-O complexity, 3-tier progressive hints, and compiler diagnostics'}
@@ -1058,7 +1058,7 @@ export default function SnippetPage() {
                   type="button"
                   onClick={handleAnalyze}
                   disabled={analysisLoading || cooldownActive}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50"
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 shadow-sm"
                 >
                   {analysisLoading
                     ? 'Analyzing…'
@@ -1075,12 +1075,12 @@ export default function SnippetPage() {
                 <div className="space-y-4 pt-1">
                   {/* Syntax & Issues Alert Card */}
                   {analysis.hasSyntaxErrors || (analysis.issues?.length > 0) ? (
-                    <div className="rounded-lg border border-rose-500/50 bg-rose-950/25 p-4 space-y-3 shadow-sm">
+                    <div className="rounded-lg border border-rose-200 dark:border-rose-500/50 bg-rose-50/70 dark:bg-rose-950/25 p-4 space-y-3 shadow-sm">
                       <div>
-                        <h3 className="text-sm font-bold text-rose-300">
+                        <h3 className="text-sm font-bold text-rose-800 dark:text-rose-300">
                           {analysis.hasSyntaxErrors ? 'Syntax Errors Detected' : 'Code Issues Detected'}
                         </h3>
-                        <p className="text-xs text-rose-200/80">
+                        <p className="text-xs text-rose-700 dark:text-rose-200/80">
                           {analysis.issues?.length || 1} issue(s) detected in {snippet.language}.
                         </p>
                       </div>
@@ -1089,7 +1089,7 @@ export default function SnippetPage() {
                         {(analysis.issues || []).map((iss, i) => (
                           <div
                             key={`review-iss-${i}`}
-                            className="rounded-md border border-rose-900/60 bg-rose-950/40 p-3 space-y-1.5 text-xs"
+                            className="rounded-md border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-rose-950/40 p-3 space-y-1.5 text-xs shadow-sm"
                           >
                             <div className="flex flex-wrap items-center justify-between gap-2">
                               <div className="flex items-center gap-2">
@@ -1099,22 +1099,22 @@ export default function SnippetPage() {
                                       ? 'bg-rose-600 text-white'
                                       : iss.severity === 'High'
                                       ? 'bg-orange-600 text-white'
-                                      : 'bg-amber-600 text-slate-900'
+                                      : 'bg-amber-500 text-slate-950'
                                   }`}
                                 >
                                   {iss.severity}
                                 </span>
-                                <span className="font-semibold text-rose-200">{iss.title}</span>
+                                <span className="font-semibold text-rose-900 dark:text-rose-200">{iss.title}</span>
                               </div>
                               {iss.line && (
-                                <span className="rounded bg-rose-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-300">
+                                <span className="rounded bg-rose-100 dark:bg-rose-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-800 dark:text-rose-300">
                                   Line {iss.line}
                                 </span>
                               )}
                             </div>
-                            {iss.description && <p className="text-slate-300 leading-relaxed">{iss.description}</p>}
+                            {iss.description && <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{iss.description}</p>}
                             {iss.fix && (
-                              <p className="rounded bg-slate-950/80 p-2 font-mono text-[11px] text-emerald-300 border border-slate-800">
+                              <p className="rounded bg-slate-50 dark:bg-slate-950/80 p-2 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-slate-800">
                                 Fix: {iss.fix}
                               </p>
                             )}
@@ -1123,22 +1123,22 @@ export default function SnippetPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 text-xs text-emerald-300">
+                    <div className="rounded-lg border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 p-3 text-xs text-emerald-800 dark:text-emerald-300 shadow-sm">
                       <strong>Syntax Valid:</strong> Clean code with no compilation or parse errors.
                     </div>
                   )}
 
                   {/* Score & Complexity Card */}
-                  <div className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
+                  <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 space-y-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600/20 border border-blue-500/30 text-base font-bold text-blue-400">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-600/20 border border-blue-200 dark:border-blue-500/30 text-base font-bold text-blue-700 dark:text-blue-400">
                           {analysis.overallScore}
-                          <span className="text-[10px] font-normal text-slate-400">/10</span>
+                          <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">/10</span>
                         </div>
                         <div>
-                          <h3 className="text-sm font-bold text-white">Algorithmic Quality</h3>
-                          <p className="text-xs text-slate-400">
+                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Algorithmic Quality</h3>
+                          <p className="text-xs text-slate-600 dark:text-slate-400">
                             {analysis.category} {analysis.subCategory ? `· ${analysis.subCategory}` : ''}
                           </p>
                         </div>
@@ -1146,10 +1146,10 @@ export default function SnippetPage() {
 
                       {(analysis.timeComplexity || analysis.complexity?.timeComplexity) && (
                         <div className="flex items-center gap-2 font-mono text-xs">
-                          <span className="rounded bg-slate-800 px-2.5 py-1 text-blue-300 border border-slate-700">
+                          <span className="rounded bg-white dark:bg-slate-800 px-2.5 py-1 text-blue-700 dark:text-blue-300 border border-slate-200 dark:border-slate-700 shadow-sm">
                             Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity}
                           </span>
-                          <span className="rounded bg-slate-800 px-2.5 py-1 text-indigo-300 border border-slate-700">
+                          <span className="rounded bg-white dark:bg-slate-800 px-2.5 py-1 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-700 shadow-sm">
                             Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity}
                           </span>
                         </div>
@@ -1161,11 +1161,11 @@ export default function SnippetPage() {
                       <div className="grid gap-2 sm:grid-cols-5">
                         {Object.entries(analysis.ratings).map(([key, val]) => (
                           <div key={key} className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-slate-400 capitalize">
+                            <div className="flex justify-between text-[10px] text-slate-600 dark:text-slate-400 capitalize">
                               <span>{key}</span>
-                              <span className="font-semibold text-slate-300">{val}/10</span>
+                              <span className="font-semibold text-slate-800 dark:text-slate-300">{val}/10</span>
                             </div>
-                            <div className="h-1.5 w-full rounded-full bg-slate-800 overflow-hidden">
+                            <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
                               <div
                                 className={`h-full rounded-full ${
                                   val >= 8 ? 'bg-emerald-500' : val >= 6 ? 'bg-blue-500' : 'bg-amber-500'
@@ -1178,28 +1178,28 @@ export default function SnippetPage() {
                       </div>
                     )}
 
-                    {analysis.summary && <p className="text-xs text-slate-300 leading-relaxed border-t border-slate-800 pt-2.5">{analysis.summary}</p>}
+                    {analysis.summary && <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-200 dark:border-slate-800 pt-2.5">{analysis.summary}</p>}
                   </div>
 
                   {/* SQL Execution Order Pipeline (if SQL) */}
                   {isSql && analysis.sqlAnalysis?.clauseOrder?.length > 0 && (
-                    <div className="rounded-lg border border-emerald-900/40 bg-emerald-950/15 p-4 space-y-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/15 p-4 space-y-3">
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
                         Logical SQL Execution Pipeline
                       </h3>
                       <div className="grid gap-2 sm:grid-cols-3">
                         {analysis.sqlAnalysis.clauseOrder.map((step, idx) => (
                           <div
                             key={`step-${idx}`}
-                            className="rounded-md border border-emerald-900/50 bg-slate-950 p-2.5 text-xs space-y-1"
+                            className="rounded-md border border-emerald-200 dark:border-emerald-900/50 bg-white dark:bg-slate-950 p-2.5 text-xs space-y-1 shadow-sm"
                           >
                             <div className="flex items-center justify-between">
-                              <span className="rounded bg-emerald-600/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-400">
+                              <span className="rounded bg-emerald-100 dark:bg-emerald-600/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:text-emerald-400">
                                 Step {step.order || idx + 1}
                               </span>
-                              <span className="font-bold text-white">{step.clause}</span>
+                              <span className="font-bold text-slate-900 dark:text-white">{step.clause}</span>
                             </div>
-                            <p className="text-[11px] text-slate-400">{step.description}</p>
+                            <p className="text-[11px] text-slate-600 dark:text-slate-400">{step.description}</p>
                           </div>
                         ))}
                       </div>
@@ -1208,9 +1208,9 @@ export default function SnippetPage() {
 
                   {/* 3-Tier Progressive Hints with Independent Reveal Buttons */}
                   {analysis.hints?.length > 0 && (
-                    <div className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-3">
+                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 space-y-3">
                       <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400">
                           Progressive Hint Ladder (Practice Mode)
                         </h3>
                         <span className="text-[11px] text-slate-500">
@@ -1224,22 +1224,22 @@ export default function SnippetPage() {
                           return (
                             <div
                               key={`hint-${i}`}
-                              className="rounded-md border border-slate-800 bg-slate-900/60 p-3 text-xs space-y-1.5"
+                              className="rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-3 text-xs space-y-1.5 shadow-sm"
                             >
                               <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-300">
+                                <span className="font-semibold text-slate-800 dark:text-slate-300">
                                   Hint {i + 1} {i === 0 ? '(Intuition)' : i === 1 ? '(Data Structure)' : '(Algorithm & Edge Cases)'}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => toggleHintReveal(i)}
-                                  className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
                                 >
                                   {isRevealed ? 'Hide Hint' : 'Reveal Hint'}
                                 </button>
                               </div>
                               {isRevealed && (
-                                <p className="text-slate-200 leading-relaxed pt-1 border-t border-slate-800">
+                                <p className="text-slate-800 dark:text-slate-200 leading-relaxed pt-1 border-t border-slate-100 dark:border-slate-800">
                                   {hint}
                                 </p>
                               )}
@@ -1252,10 +1252,10 @@ export default function SnippetPage() {
 
                   {/* SOLUTION CODE: HIDDEN BY DEFAULT (Reveal on Demand) */}
                   {(analysis.correctedCode || analysis.optimizedCode) && (
-                    <div className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-3">
+                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
                             Solution & Fix Reference
                           </h3>
                           <p className="text-[11px] text-slate-500">
@@ -1268,8 +1268,8 @@ export default function SnippetPage() {
                           onClick={() => setShowSolutionCode((prev) => !prev)}
                           className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
                             showSolutionCode
-                              ? 'bg-slate-800 text-slate-300 border-slate-700'
-                              : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500'
+                              ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700'
+                              : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500 shadow-sm'
                           }`}
                         >
                           {showSolutionCode ? 'Hide Solution Code' : 'Reveal Solution Code'}
@@ -1277,8 +1277,8 @@ export default function SnippetPage() {
                       </div>
 
                       {showSolutionCode && (
-                        <div className="rounded-lg border border-slate-800 bg-slate-900 overflow-hidden mt-3">
-                          <div className="flex items-center justify-between border-b border-slate-800 px-3 py-2 bg-slate-950">
+                        <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden mt-3 shadow-sm">
+                          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-3 py-2 bg-slate-50 dark:bg-slate-950">
                             <div className="flex gap-2">
                               {analysis.optimizedCode && (
                                 <button
@@ -1286,8 +1286,8 @@ export default function SnippetPage() {
                                   onClick={() => setActiveCodeTab('optimized')}
                                   className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
                                     activeCodeTab === 'optimized'
-                                      ? 'bg-emerald-600 text-white'
-                                      : 'text-slate-400 hover:text-white'
+                                      ? 'bg-emerald-600 text-white shadow-sm'
+                                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                                   }`}
                                 >
                                   Optimal Solution
@@ -1299,8 +1299,8 @@ export default function SnippetPage() {
                                   onClick={() => setActiveCodeTab('corrected')}
                                   className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
                                     activeCodeTab === 'corrected'
-                                      ? 'bg-blue-600 text-white'
-                                      : 'text-slate-400 hover:text-white'
+                                      ? 'bg-blue-600 text-white shadow-sm'
+                                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                                   }`}
                                 >
                                   Corrected Code
@@ -1315,7 +1315,7 @@ export default function SnippetPage() {
                                   activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode
                                 )
                               }
-                              className="rounded bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white"
+                              className="rounded bg-slate-200 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700"
                             >
                               {copiedCode ? 'Copied' : 'Copy Solution'}
                             </button>
@@ -1338,8 +1338,8 @@ export default function SnippetPage() {
             </div>
 
             {/* COMMENTS SECTION */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-5 space-y-4">
-              <h2 className="text-sm font-bold text-white">Discussion & Alternative Approaches ({comments.length})</h2>
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Discussion & Alternative Approaches ({comments.length})</h2>
 
               {user ? (
                 <form onSubmit={handleAddComment} className="space-y-2">
@@ -1348,41 +1348,41 @@ export default function SnippetPage() {
                     onChange={(e) => setCommentInput(e.target.value)}
                     rows={2}
                     placeholder="Share an edge case, alternative approach, or optimization tip…"
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-2.5 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
                   />
                   <div className="flex justify-end">
                     <button
                       type="submit"
                       disabled={commentSubmitting || !commentInput.trim()}
-                      className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                      className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 shadow-sm"
                     >
                       {commentSubmitting ? 'Posting…' : 'Post Comment'}
                     </button>
                   </div>
                 </form>
               ) : (
-                <p className="text-xs text-slate-400">Sign in to join the discussion.</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Sign in to join the discussion.</p>
               )}
 
-              <div className="space-y-3 divide-y divide-slate-800/80 pt-2">
+              <div className="space-y-3 divide-y divide-slate-100 dark:divide-slate-800/80 pt-2">
                 {comments.map((c) => (
                   <div key={c._id} className="pt-3 first:pt-0 space-y-1 text-xs">
-                    <div className="flex items-center justify-between text-slate-400">
+                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
                       <div className="flex items-center gap-2">
                         {c.author?.avatar && (
-                          <img src={c.author.avatar} alt={c.author.name} className="h-5 w-5 rounded-full object-cover" />
+                          <img src={c.author.avatar} alt={c.author.name} className="h-5 w-5 rounded-full object-cover border border-slate-200 dark:border-slate-700" />
                         )}
-                        <span className="font-semibold text-slate-200">{c.author?.name || 'User'}</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-200">{c.author?.name || 'User'}</span>
                       </div>
                       <span className="text-[10px]">{new Date(c.createdAt).toLocaleDateString()}</span>
                     </div>
-                    <p className="text-slate-300 leading-relaxed pl-7">{c.content}</p>
+                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed pl-7">{c.content}</p>
                     {user && user.id === c.author?._id && (
                       <div className="flex justify-end">
                         <button
                           type="button"
                           onClick={() => handleDeleteComment(c._id)}
-                          className="text-[10px] text-rose-400 hover:text-rose-300"
+                          className="text-[10px] text-rose-600 dark:text-rose-400 hover:underline"
                         >
                           Delete
                         </button>
@@ -1397,8 +1397,8 @@ export default function SnippetPage() {
           {/* RIGHT SIDEBAR: Version History Drawer & Metadata */}
           <div className="space-y-6">
             {/* Version History Drawer */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-sm">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
                 Version History ({versions.length})
               </h3>
 
@@ -1417,42 +1417,42 @@ export default function SnippetPage() {
             </div>
 
             {/* Author & Problem Details Card */}
-            <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 space-y-3 text-xs">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">Problem Info</h3>
+            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3 text-xs shadow-sm">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400">Problem Info</h3>
               <div className="flex items-center gap-3">
                 {snippet.owner?.avatar && (
                   <img
                     src={snippet.owner.avatar}
                     alt={snippet.owner.name}
-                    className="h-9 w-9 rounded-full object-cover border border-slate-700"
+                    className="h-9 w-9 rounded-full object-cover border border-slate-200 dark:border-slate-700"
                   />
                 )}
                 <div>
-                  <p className="font-semibold text-white">{snippet.owner?.name || 'Developer'}</p>
-                  <p className="text-[11px] text-slate-400">Created {new Date(snippet.createdAt).toLocaleDateString()}</p>
+                  <p className="font-semibold text-slate-900 dark:text-white">{snippet.owner?.name || 'Developer'}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Created {new Date(snippet.createdAt).toLocaleDateString()}</p>
                 </div>
               </div>
 
-              <div className="space-y-1.5 border-t border-slate-800 pt-3 text-[11px] text-slate-400">
+              <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-[11px] text-slate-600 dark:text-slate-400">
                 <div className="flex justify-between">
                   <span>Domain:</span>
-                  <span className="font-semibold text-slate-200">{isSql ? 'SQL' : 'DSA'}</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">{isSql ? 'SQL' : 'DSA'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Difficulty:</span>
-                  <span className="font-semibold text-slate-200">{snippet.difficulty || 'Medium'}</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">{snippet.difficulty || 'Medium'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Pattern / Topic:</span>
-                  <span className="font-semibold text-slate-200">{snippet.topic || 'General'}</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">{snippet.topic || 'General'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Visibility:</span>
-                  <span className="font-semibold text-slate-200">{snippet.isPublic ? 'Public' : 'Private'}</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">{snippet.isPublic ? 'Public' : 'Private'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Total Versions:</span>
-                  <span className="font-semibold text-slate-200">{snippet.currentVersion}</span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-200">{snippet.currentVersion}</span>
                 </div>
               </div>
             </div>

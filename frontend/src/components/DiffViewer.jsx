@@ -41,13 +41,13 @@ const DiffViewer = memo(function DiffViewer({
 
   if (oldCode === newCode) {
     return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-slate-800 bg-[#0d1117] p-8 text-center shadow-lg">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-800/80 text-emerald-400">
+      <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1117] p-8 text-center shadow-sm">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800/80 text-emerald-600 dark:text-emerald-400">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
-        <p className="mt-3 text-sm font-semibold text-slate-200">Identical Content</p>
+        <p className="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Identical Content</p>
         <p className="mt-1 text-xs text-slate-500">No differences detected between these two versions.</p>
       </div>
     );
@@ -57,26 +57,26 @@ const DiffViewer = memo(function DiffViewer({
     <motion.div
       initial={{ opacity: 0, y: 4 }}
       animate={{ opacity: 1, y: 0 }}
-      className="overflow-hidden rounded-xl border border-[#30363d] bg-[#0d1117] shadow-2xl"
+      className="overflow-hidden rounded-xl border border-slate-200 dark:border-[#30363d] bg-white dark:bg-[#0d1117] shadow-sm dark:shadow-2xl"
     >
       {/* VS Code Tab Bar & Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#30363d] bg-[#161b22] px-3.5 py-2 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-[#30363d] bg-slate-50 dark:bg-[#161b22] px-3.5 py-2 text-xs">
         {/* Left: Tab Indicator & Diff Stats */}
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="flex items-center gap-1.5 rounded-md bg-[#21262d] px-2.5 py-1 font-code text-[11.5px] text-slate-200 border border-[#30363d]">
-            <span className="text-slate-400">{oldTitle}</span>
-            <span className="text-slate-500">↔</span>
-            <span className="text-blue-400 font-medium">{newTitle}</span>
+          <div className="flex items-center gap-1.5 rounded-md bg-white dark:bg-[#21262d] px-2.5 py-1 font-code text-[11.5px] text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-[#30363d]">
+            <span className="text-slate-500 dark:text-slate-400">{oldTitle}</span>
+            <span className="text-slate-400 dark:text-slate-500">↔</span>
+            <span className="text-blue-600 dark:text-blue-400 font-medium">{newTitle}</span>
           </div>
 
           <div className="flex items-center gap-1.5 font-code text-[11px]">
-            <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-2 py-0.5 font-bold text-emerald-400 border border-emerald-500/25">
+            <span className="inline-flex items-center gap-0.5 rounded bg-emerald-500/15 px-2 py-0.5 font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/25">
               +{stats.additions}
             </span>
-            <span className="inline-flex items-center gap-0.5 rounded bg-rose-500/15 px-2 py-0.5 font-bold text-rose-400 border border-rose-500/25">
+            <span className="inline-flex items-center gap-0.5 rounded bg-rose-500/15 px-2 py-0.5 font-bold text-rose-600 dark:text-rose-400 border border-rose-500/25">
               -{stats.deletions}
             </span>
-            <span className="text-slate-400 text-[11px]">
+            <span className="text-slate-500 dark:text-slate-400 text-[11px]">
               ({stats.totalChanges} {stats.totalChanges === 1 ? 'change' : 'changes'})
             </span>
           </div>
@@ -87,7 +87,7 @@ const DiffViewer = memo(function DiffViewer({
           <button
             type="button"
             onClick={handleCopyUnifiedDiff}
-            className="rounded px-2 py-1 text-[11px] font-medium text-slate-400 hover:bg-[#21262d] hover:text-slate-200 transition-colors"
+            className="rounded px-2 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#21262d] hover:text-slate-900 dark:hover:text-slate-200 transition-colors"
           >
             {copied ? '✓ Copied Diff' : 'Copy Diff'}
           </button>
@@ -98,21 +98,21 @@ const DiffViewer = memo(function DiffViewer({
             className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${
               wrapLines
                 ? 'bg-blue-600 text-white'
-                : 'text-slate-400 hover:bg-[#21262d] hover:text-slate-200'
+                : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-[#21262d] hover:text-slate-900 dark:hover:text-slate-200'
             }`}
           >
             {wrapLines ? 'Wrap: On' : 'Wrap: Off'}
           </button>
 
           {/* Mode Switcher */}
-          <div className="flex overflow-hidden rounded-md border border-[#30363d] bg-[#0d1117] p-0.5">
+          <div className="flex overflow-hidden rounded-md border border-slate-200 dark:border-[#30363d] bg-white dark:bg-[#0d1117] p-0.5">
             <button
               type="button"
               onClick={() => setMode('split')}
               className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
                 mode === 'split'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -127,7 +127,7 @@ const DiffViewer = memo(function DiffViewer({
               className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-[11px] font-medium transition-colors ${
                 mode === 'unified'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
@@ -146,12 +146,12 @@ const DiffViewer = memo(function DiffViewer({
         /* Split (Side-by-Side) Mode */
         <div className="flex flex-col">
           {/* Subheaders for Left & Right Panes */}
-          <div className="grid grid-cols-2 border-b border-[#30363d] bg-[#161b22] text-[11px] font-medium text-slate-400">
-            <div className="flex items-center justify-between border-r border-[#30363d] px-4 py-1.5">
-              <span className="font-code text-slate-300">{oldTitle} (Base)</span>
+          <div className="grid grid-cols-2 border-b border-slate-200 dark:border-[#30363d] bg-slate-50 dark:bg-[#161b22] text-[11px] font-medium text-slate-500 dark:text-slate-400">
+            <div className="flex items-center justify-between border-r border-slate-200 dark:border-[#30363d] px-4 py-1.5">
+              <span className="font-code text-slate-700 dark:text-slate-300">{oldTitle} (Base)</span>
             </div>
             <div className="flex items-center justify-between px-4 py-1.5">
-              <span className="font-code text-blue-400">{newTitle} (Compare)</span>
+              <span className="font-code text-blue-600 dark:text-blue-400">{newTitle} (Compare)</span>
             </div>
           </div>
 
@@ -169,24 +169,24 @@ const DiffViewer = memo(function DiffViewer({
                 return (
                   <div
                     key={`split-${idx}`}
-                    className="grid grid-cols-2 border-b border-[#21262d]/50 h-[22px] min-h-[22px]"
+                    className="grid grid-cols-2 border-b border-slate-100 dark:border-[#21262d]/50 h-[22px] min-h-[22px]"
                   >
                     {/* Left Pane (Base) */}
                     <div
-                      className={`flex items-center border-r border-[#30363d] transition-colors h-full ${
+                      className={`flex items-center border-r border-slate-200 dark:border-[#30363d] transition-colors h-full ${
                         leftDel
                           ? 'diff-deleted-bg diff-deleted-border'
                           : leftEmpty
                           ? 'diff-hatch-pattern'
-                          : 'bg-[#0d1117] hover:bg-[#161b22]'
+                          : 'bg-white dark:bg-[#0d1117] hover:bg-slate-50 dark:hover:bg-[#161b22]'
                       }`}
                     >
-                      <span className="w-11 shrink-0 select-none bg-[#161b22]/90 pr-2 text-right font-code text-[11px] text-slate-500 border-r border-[#30363d] leading-[22px] h-full flex items-center justify-end">
+                      <span className="w-11 shrink-0 select-none bg-slate-50 dark:bg-[#161b22]/90 pr-2 text-right font-code text-[11px] text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-[#30363d] leading-[22px] h-full flex items-center justify-end">
                         {row.left.lineNumber || ''}
                       </span>
                       <span
                         className={`w-5 shrink-0 select-none text-center font-code font-bold text-xs ${
-                          leftDel ? 'text-rose-400' : 'text-transparent'
+                          leftDel ? 'text-rose-600 dark:text-rose-400' : 'text-transparent'
                         }`}
                       >
                         {leftDel ? '-' : ' '}
@@ -195,7 +195,7 @@ const DiffViewer = memo(function DiffViewer({
                         className={`flex-1 px-2 font-code text-[12.5px] leading-[22px] overflow-hidden ${
                           wrapLines ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'
                         } ${
-                          leftDel ? 'text-rose-200' : leftEmpty ? 'text-transparent' : 'text-slate-200'
+                          leftDel ? 'text-rose-700 dark:text-rose-200' : leftEmpty ? 'text-transparent' : 'text-slate-800 dark:text-slate-200'
                         }`}
                       >
                         {row.left.value || ' '}
@@ -209,15 +209,15 @@ const DiffViewer = memo(function DiffViewer({
                           ? 'diff-added-bg diff-added-border'
                           : rightEmpty
                           ? 'diff-hatch-pattern'
-                          : 'bg-[#0d1117] hover:bg-[#161b22]'
+                          : 'bg-white dark:bg-[#0d1117] hover:bg-slate-50 dark:hover:bg-[#161b22]'
                       }`}
                     >
-                      <span className="w-11 shrink-0 select-none bg-[#161b22]/90 pr-2 text-right font-code text-[11px] text-slate-500 border-r border-[#30363d] leading-[22px] h-full flex items-center justify-end">
+                      <span className="w-11 shrink-0 select-none bg-slate-50 dark:bg-[#161b22]/90 pr-2 text-right font-code text-[11px] text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-[#30363d] leading-[22px] h-full flex items-center justify-end">
                         {row.right.lineNumber || ''}
                       </span>
                       <span
                         className={`w-5 shrink-0 select-none text-center font-code font-bold text-xs ${
-                          rightAdd ? 'text-emerald-400' : 'text-transparent'
+                          rightAdd ? 'text-emerald-600 dark:text-emerald-400' : 'text-transparent'
                         }`}
                       >
                         {rightAdd ? '+' : ' '}
@@ -226,7 +226,7 @@ const DiffViewer = memo(function DiffViewer({
                         className={`flex-1 px-2 font-code text-[12.5px] leading-[22px] overflow-hidden ${
                           wrapLines ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'
                         } ${
-                          rightAdd ? 'text-emerald-200' : rightEmpty ? 'text-transparent' : 'text-slate-200'
+                          rightAdd ? 'text-emerald-700 dark:text-emerald-200' : rightEmpty ? 'text-transparent' : 'text-slate-800 dark:text-slate-200'
                         }`}
                       >
                         {row.right.value || ' '}
@@ -252,29 +252,29 @@ const DiffViewer = memo(function DiffViewer({
               return (
                 <div
                   key={`u-${idx}`}
-                  className={`flex items-center border-b border-[#21262d]/50 h-[22px] min-h-[22px] transition-colors ${
+                  className={`flex items-center border-b border-slate-100 dark:border-[#21262d]/50 h-[22px] min-h-[22px] transition-colors ${
                     isAdded
                       ? 'diff-added-bg diff-added-border'
                       : isDeleted
                       ? 'diff-deleted-bg diff-deleted-border'
-                      : 'bg-[#0d1117] hover:bg-[#161b22]'
+                      : 'bg-white dark:bg-[#0d1117] hover:bg-slate-50 dark:hover:bg-[#161b22]'
                   }`}
                 >
                   {/* Old line number */}
-                  <span className="w-11 shrink-0 select-none bg-[#161b22]/90 pr-2 text-right font-code text-[11px] text-slate-500 border-r border-[#30363d] leading-[22px] h-full flex items-center justify-end">
+                  <span className="w-11 shrink-0 select-none bg-slate-50 dark:bg-[#161b22]/90 pr-2 text-right font-code text-[11px] text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-[#30363d] leading-[22px] h-full flex items-center justify-end">
                     {line.oldLineNumber || ''}
                   </span>
                   {/* New line number */}
-                  <span className="w-11 shrink-0 select-none bg-[#161b22]/90 pr-2 text-right font-code text-[11px] text-slate-500 border-r border-[#30363d] leading-[22px] h-full flex items-center justify-end">
+                  <span className="w-11 shrink-0 select-none bg-slate-50 dark:bg-[#161b22]/90 pr-2 text-right font-code text-[11px] text-slate-400 dark:text-slate-500 border-r border-slate-200 dark:border-[#30363d] leading-[22px] h-full flex items-center justify-end">
                     {line.newLineNumber || ''}
                   </span>
                   {/* Sign indicator */}
                   <span
                     className={`w-6 shrink-0 select-none text-center font-code font-bold text-xs ${
                       isAdded
-                        ? 'text-emerald-400'
+                        ? 'text-emerald-600 dark:text-emerald-400'
                         : isDeleted
-                        ? 'text-rose-400'
+                        ? 'text-rose-600 dark:text-rose-400'
                         : 'text-transparent'
                     }`}
                   >
@@ -286,10 +286,10 @@ const DiffViewer = memo(function DiffViewer({
                       wrapLines ? 'whitespace-pre-wrap break-words' : 'whitespace-pre'
                     } ${
                       isAdded
-                        ? 'text-emerald-200'
+                        ? 'text-emerald-700 dark:text-emerald-200'
                         : isDeleted
-                        ? 'text-rose-200'
-                        : 'text-slate-200'
+                        ? 'text-rose-700 dark:text-rose-200'
+                        : 'text-slate-800 dark:text-slate-200'
                     }`}
                   >
                     {line.value || ' '}

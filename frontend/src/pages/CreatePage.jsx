@@ -142,24 +142,24 @@ export default function CreatePage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors">
       <Navbar />
       <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">Create Problem / Solution</h1>
-            <p className="mt-1 text-xs text-slate-400">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create Problem / Solution</h1>
+            <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
               Publish a DSA problem or SQL query with version tracking and AI analysis.
             </p>
           </div>
 
           {/* Domain Toggle */}
-          <div className="flex rounded-lg bg-slate-900 p-1 border border-slate-800">
+          <div className="flex rounded-lg bg-white dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-800 shadow-sm">
             <button
               type="button"
               onClick={() => handleDomainSwitch('dsa')}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                domain === 'dsa' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                domain === 'dsa' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               DSA Problem
@@ -168,7 +168,7 @@ export default function CreatePage() {
               type="button"
               onClick={() => handleDomainSwitch('sql')}
               className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                domain === 'sql' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                domain === 'sql' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               SQL Query
@@ -177,12 +177,12 @@ export default function CreatePage() {
         </motion.div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4 shadow-md">
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 space-y-4 shadow-sm">
             {/* Title & Difficulty */}
             <div className="grid gap-4 md:grid-cols-3">
               <div className="md:col-span-2">
-                <label htmlFor="title" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  Problem Title <span className="text-rose-400">*</span>
+                <label htmlFor="title" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                  Problem Title <span className="text-rose-500">*</span>
                 </label>
                 <input
                   id="title"
@@ -191,19 +191,19 @@ export default function CreatePage() {
                     maxLength: { value: 200, message: 'Title must be under 200 characters' },
                   })}
                   placeholder={domain === 'dsa' ? 'e.g. Trapping Rain Water' : 'e.g. Department Top Three Salaries'}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
                 />
-                {errors.title && <p className="mt-1 text-xs text-rose-400">{errors.title.message}</p>}
+                {errors.title && <p className="mt-1 text-xs text-rose-500">{errors.title.message}</p>}
               </div>
 
               <div>
-                <label htmlFor="difficulty" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label htmlFor="difficulty" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   Difficulty
                 </label>
                 <select
                   id="difficulty"
                   {...register('difficulty')}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
                 >
                   {DIFFICULTIES.map((diff) => (
                     <option key={diff} value={diff}>
@@ -218,14 +218,14 @@ export default function CreatePage() {
             <div className="grid gap-4 md:grid-cols-2">
               {domain === 'dsa' ? (
                 <div>
-                  <label htmlFor="language" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <label htmlFor="language" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Primary Language
                   </label>
                   <select
                     id="language"
                     {...register('language')}
                     onChange={handleLanguageChange}
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
                   >
                     {DSA_LANGUAGES.map((lang) => (
                       <option key={lang.id} value={lang.id}>
@@ -236,13 +236,13 @@ export default function CreatePage() {
                 </div>
               ) : (
                 <div>
-                  <label htmlFor="sqlDialect" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <label htmlFor="sqlDialect" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     SQL Dialect
                   </label>
                   <select
                     id="sqlDialect"
                     {...register('sqlDialect')}
-                    className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
                   >
                     {SQL_DIALECTS.map((dial) => (
                       <option key={dial.id} value={dial.id}>
@@ -254,13 +254,13 @@ export default function CreatePage() {
               )}
 
               <div>
-                <label htmlFor="topic" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label htmlFor="topic" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                   {domain === 'dsa' ? 'Pattern / Topic' : 'SQL Topic'}
                 </label>
                 <select
                   id="topic"
                   {...register('topic')}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
                 >
                   {(domain === 'dsa' ? DSA_TOPICS : SQL_TOPICS).map((top) => (
                     <option key={top} value={top}>
@@ -273,27 +273,27 @@ export default function CreatePage() {
 
             {/* Target Complexity (for DSA) */}
             {domain === 'dsa' && (
-              <div className="grid gap-4 md:grid-cols-2 rounded-lg border border-slate-800 bg-slate-950/60 p-3.5">
+              <div className="grid gap-4 md:grid-cols-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3.5">
                 <div>
-                  <label htmlFor="targetTimeComplexity" className="mb-1 block text-xs font-medium text-slate-300">
+                  <label htmlFor="targetTimeComplexity" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
                     Target Time Complexity
                   </label>
                   <input
                     id="targetTimeComplexity"
                     {...register('targetTimeComplexity')}
                     placeholder="e.g. O(n), O(n log n), O(1)"
-                    className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 font-mono text-xs text-blue-300 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 font-mono text-xs text-blue-700 dark:text-blue-300 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label htmlFor="targetSpaceComplexity" className="mb-1 block text-xs font-medium text-slate-300">
+                  <label htmlFor="targetSpaceComplexity" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
                     Target Space Complexity
                   </label>
                   <input
                     id="targetSpaceComplexity"
                     {...register('targetSpaceComplexity')}
                     placeholder="e.g. O(1), O(n)"
-                    className="w-full rounded border border-slate-700 bg-slate-900 px-3 py-1.5 font-mono text-xs text-indigo-300 focus:border-blue-500 focus:outline-none"
+                    className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 font-mono text-xs text-indigo-700 dark:text-indigo-300 focus:border-blue-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -301,7 +301,7 @@ export default function CreatePage() {
 
             {/* Problem Statement / Constraints */}
             <div>
-              <label htmlFor="problemStatement" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label htmlFor="problemStatement" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 Problem Description & Constraints
               </label>
               <textarea
@@ -313,21 +313,21 @@ export default function CreatePage() {
                     ? "Problem description, example inputs/outputs, and numerical constraints..."
                     : "SQL query objective, schema context, or expected column output..."
                 }
-                className="w-full rounded-md border border-slate-700 bg-slate-950 p-3 font-mono text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-3 font-mono text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
               />
             </div>
 
             {/* Mock Schema Definition (for SQL) */}
             {domain === 'sql' && (
-              <div className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-3.5">
+              <div className="space-y-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3.5">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                     Mock Schema & Sample Data
                   </label>
                   <button
                     type="button"
                     onClick={() => setSqlSchema(DEFAULT_MOCK_SQL_SCHEMA)}
-                    className="text-[11px] text-blue-400 hover:text-blue-300"
+                    className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
                   >
                     Reset Example Schema
                   </button>
@@ -337,7 +337,7 @@ export default function CreatePage() {
                   onChange={(e) => setSqlSchema(e.target.value)}
                   rows={6}
                   placeholder="CREATE TABLE ... INSERT INTO ..."
-                  className="w-full rounded-md border border-slate-700 bg-slate-900 p-2.5 font-mono text-xs text-emerald-300 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 font-mono text-xs text-emerald-700 dark:text-emerald-300 focus:border-blue-500 focus:outline-none"
                 />
               </div>
             )}
@@ -345,24 +345,24 @@ export default function CreatePage() {
             {/* Tags & Visibility */}
             <div className="grid gap-4 md:grid-cols-2">
               <div>
-                <label htmlFor="tags" className="mb-1.5 block text-xs font-medium text-slate-300">
+                <label htmlFor="tags" className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
                   Tags (comma-separated)
                 </label>
                 <input
                   id="tags"
                   {...register('tags')}
                   placeholder="leetcode, binary-search, array"
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label htmlFor="visibility" className="mb-1.5 block text-xs font-medium text-slate-300">
+                <label htmlFor="visibility" className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
                   Visibility
                 </label>
                 <select
                   id="visibility"
                   {...register('isPublic')}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
+                  className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
                 >
                   <option value="true">Public</option>
                   <option value="false">Private</option>
@@ -372,14 +372,14 @@ export default function CreatePage() {
 
             {/* Version 1 Note */}
             <div>
-              <label htmlFor="commitMessage" className="mb-1.5 block text-xs font-medium text-slate-300">
+              <label htmlFor="commitMessage" className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
                 Initial Version Note
               </label>
               <input
                 id="commitMessage"
                 {...register('commitMessage')}
                 placeholder="e.g. Initial solution approach"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+                className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
               />
             </div>
           </div>
@@ -387,7 +387,7 @@ export default function CreatePage() {
           {/* Solution Code Editor */}
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label className="text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
                 {domain === 'dsa' ? `Solution Code (${selectedLanguage})` : 'SQL Query'}
               </label>
               <div className="flex items-center gap-3">
@@ -395,7 +395,7 @@ export default function CreatePage() {
                   <button
                     type="button"
                     onClick={() => setShowToolkit((prev) => !prev)}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 font-medium"
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
                   >
                     {showToolkit ? 'Hide Student Toolkit' : 'Open Student Toolkit'}
                   </button>
@@ -403,7 +403,7 @@ export default function CreatePage() {
                 <button
                   type="button"
                   onClick={insertBoilerplate}
-                  className="text-xs text-blue-400 hover:text-blue-300"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                 >
                   Insert Starter Template
                 </button>
@@ -416,7 +416,7 @@ export default function CreatePage() {
               </div>
             )}
 
-            <Suspense fallback={<div className="rounded-xl border border-slate-800 bg-slate-900 p-10 text-sm text-slate-400">Loading editor…</div>}>
+            <Suspense fallback={<div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-10 text-sm text-slate-500">Loading editor…</div>}>
               <CodeEditor
                 value={code}
                 onChange={setCode}
@@ -426,13 +426,13 @@ export default function CreatePage() {
             </Suspense>
           </div>
 
-          {error && <p className="text-xs text-rose-400">{error}</p>}
+          {error && <p className="text-xs text-rose-500">{error}</p>}
 
           <div className="flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="rounded-md border border-slate-700 px-4 py-2 text-xs text-slate-300 transition-colors hover:bg-slate-800"
+              className="rounded-md border border-slate-200 dark:border-slate-700 px-4 py-2 text-xs text-slate-700 dark:text-slate-300 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               Cancel
             </button>

@@ -86,21 +86,21 @@ export default function DashboardPage() {
   const availableLanguages = domain === 'sql' ? SQL_LANGUAGES : domain === 'dsa' ? DSA_LANGUAGES : [...DSA_LANGUAGES, ...SQL_LANGUAGES];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors">
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* Header with Domain Tabs */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-white">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">
                 {domain === 'dsa'
                   ? 'DSA Arena'
                   : domain === 'sql'
                   ? 'SQL Studio'
                   : 'DSA & SQL Problem Hub'}
               </h1>
-              <p className="mt-1 text-xs text-slate-400">
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
                 {domain === 'dsa'
                   ? 'Algorithmic problem-solving in Java, Python, C++, and JavaScript.'
                   : domain === 'sql'
@@ -110,12 +110,12 @@ export default function DashboardPage() {
             </div>
 
             {/* Domain Switcher */}
-            <div className="flex rounded-lg bg-slate-900 p-1 border border-slate-800">
+            <div className="flex rounded-lg bg-white dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-800 shadow-sm">
               <button
                 type="button"
                 onClick={() => handleDomainChange('')}
                 className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  !domain ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  !domain ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 All Problems
@@ -124,7 +124,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => handleDomainChange('dsa')}
                 className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  domain === 'dsa' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  domain === 'dsa' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 DSA Arena
@@ -133,7 +133,7 @@ export default function DashboardPage() {
                 type="button"
                 onClick={() => handleDomainChange('sql')}
                 className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
-                  domain === 'sql' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                  domain === 'sql' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 SQL Studio
@@ -150,8 +150,8 @@ export default function DashboardPage() {
             onClick={() => setSelectedTopic('')}
             className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors border ${
               !selectedTopic
-                ? 'bg-blue-600/20 text-blue-400 border-blue-500/40'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white'
+                ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/40 font-semibold'
+                : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             All Topics
@@ -164,7 +164,7 @@ export default function DashboardPage() {
               className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors border ${
                 selectedTopic === top
                   ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
-                  : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white'
+                  : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               {top}
@@ -177,11 +177,11 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="mb-6 grid gap-3 rounded-xl border border-slate-800 bg-slate-900 p-4 md:grid-cols-[1fr_auto_auto_auto]"
+          className="mb-6 grid gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 md:grid-cols-[1fr_auto_auto_auto] shadow-sm"
         >
           <div className="relative">
             <svg
-              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+              className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -196,14 +196,14 @@ export default function DashboardPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search problems, patterns, constraints..."
-              className="w-full rounded-md border border-slate-700 bg-slate-950 py-2 pl-9 pr-3 text-xs text-slate-200 placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 py-2 pl-9 pr-3 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 transition-colors focus:border-blue-500 focus:outline-none"
             />
           </div>
 
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
-            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
           >
             <option value="">All Difficulties</option>
             {DIFFICULTIES.map((diff) => (
@@ -216,7 +216,7 @@ export default function DashboardPage() {
           <select
             value={language}
             onChange={(e) => setLanguage(e.target.value)}
-            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
           >
             <option value="">All Languages</option>
             {availableLanguages.map((l) => (
@@ -231,7 +231,7 @@ export default function DashboardPage() {
             value={tag}
             onChange={(e) => setTag(e.target.value)}
             placeholder="Tag (e.g. leetcode)"
-            className="rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
+            className="rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
           />
         </motion.div>
 
@@ -239,8 +239,8 @@ export default function DashboardPage() {
         {loading ? (
           <SnippetGridSkeleton count={6} />
         ) : snippets.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-12 text-center">
-            <p className="text-base font-semibold text-slate-300">No problems found</p>
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center shadow-sm">
+            <p className="text-base font-semibold text-slate-800 dark:text-slate-300">No problems found</p>
             <p className="mt-1 text-xs text-slate-500">
               Try adjusting your search query, difficulty, or pattern filters.
             </p>

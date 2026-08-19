@@ -64,15 +64,19 @@ const errorLineField = StateField.define({
   provide: (field) => EditorView.decorations.from(field),
 });
 
+import { useTheme } from '../store/ThemeContext.jsx';
+
 const CodeEditor = memo(function CodeEditor({
   value,
   onChange,
   language = 'javascript',
   height = '320px',
   readOnly = false,
-  theme = 'dark',
+  theme: customTheme,
   errorLines = [],
 }) {
+  const { theme: activeTheme } = useTheme();
+  const currentTheme = customTheme || activeTheme || 'dark';
   const editorViewRef = useRef(null);
 
   const extensions = useMemo(() => {
@@ -91,11 +95,11 @@ const CodeEditor = memo(function CodeEditor({
   }, [errorLines]);
 
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950">
+    <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 transition-colors">
       <CodeMirror
         value={value}
         height={height}
-        theme={theme}
+        theme={currentTheme}
         editable={!readOnly}
         readOnly={readOnly}
         extensions={extensions}

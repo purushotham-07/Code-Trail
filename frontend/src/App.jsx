@@ -4,6 +4,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import { SnippetGridSkeleton } from './components/LoadingSkeleton.jsx';
 import { AuthProvider } from './store/AuthContext.jsx';
+import { ThemeProvider } from './store/ThemeContext.jsx';
 
 // Code-split each page so only the active route's bundle is loaded.
 const DashboardPage = lazy(() => import('./pages/DashboardPage.jsx'));
@@ -13,7 +14,7 @@ const CreatePage = lazy(() => import('./pages/CreatePage.jsx'));
 
 function PageFallback() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         <SnippetGridSkeleton count={6} />
       </div>
@@ -62,8 +63,10 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AnimatedRoutes />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AnimatedRoutes />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

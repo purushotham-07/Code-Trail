@@ -43,19 +43,19 @@ export default function ProfilePage() {
   }, [fetchData]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors">
       <Navbar />
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* Profile header */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8 flex flex-wrap items-center gap-5 rounded-xl border border-slate-800 bg-slate-900 p-6 shadow-md"
+          className="mb-8 flex flex-wrap items-center gap-5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm"
         >
           <img
             src={user?.avatar}
             alt={user?.name}
-            className="h-20 w-20 rounded-full border-2 border-slate-700 object-cover"
+            className="h-20 w-20 rounded-full border-2 border-slate-200 dark:border-slate-700 object-cover"
             onError={(e) => {
               e.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
                 user?.name || 'User'
@@ -64,12 +64,12 @@ export default function ProfilePage() {
           />
           <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-bold text-white">{user?.name}</h1>
-              <span className="rounded bg-blue-600/20 px-2 py-0.5 text-[11px] font-semibold text-blue-400 border border-blue-500/30">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-white">{user?.name}</h1>
+              <span className="rounded bg-blue-50 dark:bg-blue-600/20 px-2 py-0.5 text-[11px] font-semibold text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30">
                 DSA & SQL Solver
               </span>
             </div>
-            <p className="truncate text-xs text-slate-400 mt-0.5">{user?.email}</p>
+            <p className="truncate text-xs text-slate-600 dark:text-slate-400 mt-0.5">{user?.email}</p>
             <p className="mt-1 text-[11px] text-slate-500">
               Joined {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}
             </p>
@@ -84,16 +84,16 @@ export default function ProfilePage() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="flex items-center gap-4 rounded-xl border border-slate-800 bg-slate-900 p-5 shadow-sm"
+              className="flex items-center gap-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm"
             >
-              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-600/10 text-blue-400">
+              <span className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-600/10 text-blue-600 dark:text-blue-400">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <path d={stat.icon} />
                 </svg>
               </span>
               <div>
-                <p className="text-2xl font-black text-white">{stats[stat.key] || 0}</p>
-                <p className="text-xs text-slate-400">{stat.label}</p>
+                <p className="text-2xl font-black text-slate-900 dark:text-white">{stats[stat.key] || 0}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{stat.label}</p>
               </div>
             </motion.div>
           ))}
@@ -101,14 +101,14 @@ export default function ProfilePage() {
 
         {/* User problems & solutions */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-4">
-          <h2 className="text-lg font-bold text-white">Your DSA & SQL Problems</h2>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Your DSA & SQL Problems</h2>
         </motion.div>
 
         {loading ? (
           <SnippetGridSkeleton count={3} />
         ) : snippets.length === 0 ? (
-          <div className="rounded-xl border border-slate-800 bg-slate-900 p-12 text-center">
-            <p className="text-sm text-slate-400">You haven't published any problems or solutions yet.</p>
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-12 text-center shadow-sm">
+            <p className="text-sm text-slate-600 dark:text-slate-400">You haven't published any problems or solutions yet.</p>
           </div>
         ) : (
           <>

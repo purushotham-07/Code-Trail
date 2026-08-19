@@ -265,21 +265,21 @@ export default function DsaStudentToolkit({ onClose }) {
   const currentQuestion = DECISION_TREE_QUESTIONS.find((q) => q.id === currentQuestionId);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 shadow-xl overflow-hidden">
+    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden transition-colors">
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 bg-slate-950 px-5 py-3.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 px-5 py-3.5">
         <div>
-          <h2 className="text-sm font-bold text-white">DSA Student Mastery Toolkit</h2>
-          <p className="text-xs text-slate-400">Syntax quick-lookup, constraint calculator, and pattern decision tree.</p>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">DSA Student Mastery Toolkit</h2>
+          <p className="text-xs text-slate-600 dark:text-slate-400">Syntax quick-lookup, constraint calculator, and pattern decision tree.</p>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex rounded-lg bg-slate-900 p-1 border border-slate-800">
+        <div className="flex rounded-lg bg-white dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-800 shadow-sm">
           <button
             type="button"
             onClick={() => setActiveTab('syntax')}
             className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-              activeTab === 'syntax' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              activeTab === 'syntax' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             4-Lang Syntax Sheet
@@ -288,7 +288,7 @@ export default function DsaStudentToolkit({ onClose }) {
             type="button"
             onClick={() => setActiveTab('calculator')}
             className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-              activeTab === 'calculator' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              activeTab === 'calculator' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Big-O Constraint Advisor
@@ -297,7 +297,7 @@ export default function DsaStudentToolkit({ onClose }) {
             type="button"
             onClick={() => setActiveTab('decision')}
             className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-              activeTab === 'decision' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              activeTab === 'decision' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             Pattern Decision Tree
@@ -308,7 +308,7 @@ export default function DsaStudentToolkit({ onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="text-xs text-slate-400 hover:text-white"
+            className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
           >
             Close
           </button>
@@ -320,7 +320,7 @@ export default function DsaStudentToolkit({ onClose }) {
         <div className="p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             {/* Language Selector */}
-            <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-800">
+            <div className="flex rounded-lg bg-slate-100 dark:bg-slate-950 p-1 border border-slate-200 dark:border-slate-800">
               {[
                 { id: 'python', label: 'Python 3' },
                 { id: 'java', label: 'Java' },
@@ -332,7 +332,7 @@ export default function DsaStudentToolkit({ onClose }) {
                   type="button"
                   onClick={() => setActiveLang(lang.id)}
                   className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                    activeLang === lang.id ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'
+                    activeLang === lang.id ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {lang.label}
@@ -349,8 +349,8 @@ export default function DsaStudentToolkit({ onClose }) {
                   onClick={() => setActiveCategory(cat)}
                   className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors border ${
                     activeCategory === cat
-                      ? 'bg-blue-600/20 text-blue-400 border-blue-500/40 font-semibold'
-                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-white'
+                      ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/40 font-semibold'
+                      : 'bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {cat}
@@ -368,19 +368,19 @@ export default function DsaStudentToolkit({ onClose }) {
               return (
                 <div
                   key={`syntax-${idx}`}
-                  className="rounded-lg border border-slate-800 bg-slate-950 p-3.5 space-y-2 flex flex-col justify-between"
+                  className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3.5 space-y-2 flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-200">{item.title}</span>
+                    <span className="text-xs font-semibold text-slate-900 dark:text-slate-200">{item.title}</span>
                     <button
                       type="button"
                       onClick={() => handleCopy(codeSnippet)}
-                      className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-300 hover:bg-slate-700"
+                      className="rounded bg-slate-200 dark:bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700"
                     >
                       {isCopied ? 'Copied' : 'Copy'}
                     </button>
                   </div>
-                  <pre className="overflow-x-auto rounded bg-slate-900/90 p-2.5 font-mono text-[11px] text-blue-300 leading-relaxed border border-slate-800/80">
+                  <pre className="overflow-x-auto rounded bg-white dark:bg-slate-900/90 p-2.5 font-mono text-[11px] text-blue-700 dark:text-blue-300 leading-relaxed border border-slate-200 dark:border-slate-800/80">
                     <code>{codeSnippet}</code>
                   </pre>
                 </div>
@@ -394,11 +394,11 @@ export default function DsaStudentToolkit({ onClose }) {
       {activeTab === 'calculator' && (
         <div className="p-5 space-y-4">
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
               Input Size (N) to Allowed Time Complexity
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Online judges (LeetCode, HackerRank, Codeforces) allow roughly <strong>10^8 operations per second</strong>.
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+              Online judges allow roughly <strong>10^8 operations per second</strong>.
             </p>
           </div>
 
@@ -411,42 +411,42 @@ export default function DsaStudentToolkit({ onClose }) {
                 onClick={() => setSelectedConstraintIdx(index)}
                 className={`rounded-lg p-3 text-left border transition-colors ${
                   selectedConstraintIdx === index
-                    ? 'bg-blue-600/15 border-blue-500 text-white'
-                    : 'bg-slate-950 border-slate-800 text-slate-400 hover:bg-slate-800'
+                    ? 'bg-blue-50 dark:bg-blue-600/15 border-blue-400 dark:border-blue-500 text-slate-900 dark:text-white shadow-sm'
+                    : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
                 }`}
               >
-                <div className="font-mono text-xs font-bold text-blue-300">{tier.range}</div>
-                <div className="text-[11px] text-slate-300 mt-1 font-semibold">{tier.allowedComplexity}</div>
+                <div className="font-mono text-xs font-bold text-blue-700 dark:text-blue-300">{tier.range}</div>
+                <div className="text-[11px] text-slate-700 dark:text-slate-300 mt-1 font-semibold">{tier.allowedComplexity}</div>
               </button>
             ))}
           </div>
 
           {/* Selected Tier Breakdown */}
           {CONSTRAINT_TIERS[selectedConstraintIdx] && (
-            <div className="rounded-lg border border-slate-800 bg-slate-950 p-4 space-y-3">
+            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 space-y-3">
               <div className="grid gap-3 sm:grid-cols-2 text-xs">
                 <div className="space-y-1">
-                  <span className="font-semibold text-slate-400 uppercase text-[10px]">Target Time Complexity</span>
-                  <p className="font-mono text-sm font-bold text-emerald-400">
+                  <span className="font-semibold text-slate-500 dark:text-slate-400 uppercase text-[10px]">Target Time Complexity</span>
+                  <p className="font-mono text-sm font-bold text-emerald-600 dark:text-emerald-400">
                     {CONSTRAINT_TIERS[selectedConstraintIdx].allowedComplexity}
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <span className="font-semibold text-slate-400 uppercase text-[10px]">Approximate Operations Budget</span>
-                  <p className="font-mono text-sm font-bold text-blue-300">
+                  <span className="font-semibold text-slate-500 dark:text-slate-400 uppercase text-[10px]">Approximate Operations Budget</span>
+                  <p className="font-mono text-sm font-bold text-blue-700 dark:text-blue-300">
                     {CONSTRAINT_TIERS[selectedConstraintIdx].timeLimitOps}
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-1 border-t border-slate-800 pt-3 text-xs">
-                <span className="font-semibold text-slate-400 uppercase text-[10px]">Recommended Algorithmic Patterns</span>
-                <p className="text-slate-200 leading-relaxed">
+              <div className="space-y-1 border-t border-slate-200 dark:border-slate-800 pt-3 text-xs">
+                <span className="font-semibold text-slate-500 dark:text-slate-400 uppercase text-[10px]">Recommended Algorithmic Patterns</span>
+                <p className="text-slate-800 dark:text-slate-200 leading-relaxed">
                   {CONSTRAINT_TIERS[selectedConstraintIdx].patterns}
                 </p>
               </div>
 
-              <div className="rounded bg-slate-900 p-2.5 text-xs text-slate-300 border border-slate-800">
+              <div className="rounded bg-white dark:bg-slate-900 p-2.5 text-xs text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
                 <strong>Verdict:</strong> {CONSTRAINT_TIERS[selectedConstraintIdx].status}
               </div>
             </div>
@@ -457,12 +457,12 @@ export default function DsaStudentToolkit({ onClose }) {
       {/* TAB 3: PATTERN RECOGNITION DECISION TREE */}
       {activeTab === 'decision' && (
         <div className="p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
                 Pattern Recognition Decision Wizard
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
                 Answer guided questions to pinpoint the exact algorithmic pattern to solve your problem.
               </p>
             </div>
@@ -470,7 +470,7 @@ export default function DsaStudentToolkit({ onClose }) {
               <button
                 type="button"
                 onClick={handleResetDecision}
-                className="text-xs text-blue-400 hover:text-blue-300 font-medium"
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
               >
                 Restart Wizard
               </button>
@@ -479,15 +479,15 @@ export default function DsaStudentToolkit({ onClose }) {
 
           {finalRecommendation ? (
             /* Recommendation Result */
-            <div className="rounded-lg border border-emerald-500/40 bg-emerald-950/20 p-5 space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400">
-                <span className="text-xs font-bold uppercase tracking-wider">Recommended Pattern Found:</span>
+            <div className="rounded-lg border border-emerald-300 dark:border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/20 p-5 space-y-3">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                <span className="text-xs font-bold uppercase tracking-wider">Recommended Pattern:</span>
               </div>
-              <h4 className="text-lg font-bold text-white">{finalRecommendation.pattern}</h4>
-              <p className="text-xs text-slate-200 leading-relaxed">
+              <h4 className="text-lg font-bold text-slate-900 dark:text-white">{finalRecommendation.pattern}</h4>
+              <p className="text-xs text-slate-700 dark:text-slate-200 leading-relaxed">
                 {finalRecommendation.recommendation}
               </p>
-              <div className="font-mono text-xs text-emerald-300 pt-2 border-t border-emerald-900/40">
+              <div className="font-mono text-xs text-emerald-700 dark:text-emerald-300 pt-2 border-t border-emerald-200 dark:border-emerald-900/40">
                 {finalRecommendation.complexity}
               </div>
               <button
@@ -501,9 +501,9 @@ export default function DsaStudentToolkit({ onClose }) {
           ) : currentQuestion ? (
             /* Question & Option Cards */
             <div className="space-y-4">
-              <div className="rounded-lg bg-slate-950 p-4 border border-slate-800">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Question</span>
-                <p className="text-sm font-semibold text-white mt-1">{currentQuestion.question}</p>
+              <div className="rounded-lg bg-slate-50 dark:bg-slate-950 p-4 border border-slate-200 dark:border-slate-800">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400">Question</span>
+                <p className="text-sm font-semibold text-slate-900 dark:text-white mt-1">{currentQuestion.question}</p>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -512,10 +512,10 @@ export default function DsaStudentToolkit({ onClose }) {
                     key={`opt-${i}`}
                     type="button"
                     onClick={() => handleOptionSelect(opt)}
-                    className="rounded-lg border border-slate-800 bg-slate-950 p-4 text-left transition-colors hover:border-blue-500 hover:bg-slate-800/80"
+                    className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 text-left transition-colors hover:border-blue-500 hover:bg-slate-100 dark:hover:bg-slate-800/80"
                   >
-                    <div className="text-xs font-semibold text-slate-200">{opt.text}</div>
-                    <div className="text-[11px] text-slate-400 mt-1">
+                    <div className="text-xs font-semibold text-slate-900 dark:text-slate-200">{opt.text}</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
                       {opt.recommendation ? 'Pinpoints algorithm' : 'Proceed to next check'}
                     </div>
                   </button>
