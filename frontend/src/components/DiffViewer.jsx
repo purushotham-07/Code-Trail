@@ -1,17 +1,59 @@
 import { motion } from 'framer-motion';
-import { memo, useMemo, useState } from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
+import api from '../services/api.js';
 import { buildSideBySideDiff, calculateDiffStats, diffLines } from '../utils/diff.js';
 
 const DiffViewer = memo(function DiffViewer({
-  oldCode = '',
-  newCode = '',
-  oldTitle = 'Original',
-  newTitle = 'Modified',
-  maxHeight = '500px',
+  snippetId,
+  baseVersion,
+  compareVersion,
+  oldCode: propOldCode,
+  newCode: propNewCode,
+  oldTitle: propOldTitle,
+  newTitle: propNewTitle,
+  maxHeight = '520px',
 }) {
-  const [mode, setMode] = useState('split'); // Default to split view like VS Code
+  const [mode, setMode] = useState('split'); // 'split' | 'unified'
   const [wrapLines, setWrapLines] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  const [fetchedOldCode, setFetchedOldCode] = useState('');
+  const [fetchedNewCode, setFetchedNewCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // If snippetId and versions are provided, fetch them from backend
+  useEffect(() => {
+    if (!snippetId || !baseVersion || !compareVersion) return;
+
+    let isMounted = true;
+    setLoading(true);
+    setError('');
+
+    api
+      .get(`/versions/${snippetId}/compare/${baseVersion}/${compareVersion}`)
+      .then((res) => {
+        if (!isMounted) return;
+        setFetchedOldCode(res.data.baseCode ?? '');
+        setFetchedNewCode(res.data.comparedCode ?? '');
+      })
+      .catch((err) => {
+        if (!isMounted) return;
+        setError(err.response?.data?.message || 'Failed to fetch version diff comparison.');
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [snippetId, baseVersion, compareVersion]);
+
+  const oldCode = propOldCode !== undefined ? propOldCode : fetchedOldCode;
+  const newCode = propNewCode !== undefined ? propNewCode : fetchedNewCode;
+  const oldTitle = propOldTitle || (baseVersion ? `Version ${baseVersion}` : 'Original');
+  const newTitle = propNewTitle || (compareVersion ? `Version ${compareVersion}` : 'Modified');
 
   const { lines, sideBySideRows, stats } = useMemo(() => {
     const oldLines = oldCode ? oldCode.split('\n') : [];
@@ -39,7 +81,24 @@ const DiffViewer = memo(function DiffViewer({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (oldCode === newCode) {
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1117] p-12 text-center shadow-sm">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-600 border-t-transparent mb-3" />
+        <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">Calculating version differences…</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 p-6 text-center text-xs text-rose-700 dark:text-rose-300 shadow-sm">
+        <p className="font-semibold">{error}</p>
+      </div>
+    );
+  }
+
+  if (oldCode === newCode && (oldCode || baseVersion)) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d1117] p-8 text-center shadow-sm">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800/80 text-emerald-600 dark:text-emerald-400">
@@ -47,8 +106,10 @@ const DiffViewer = memo(function DiffViewer({
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
-        <p className="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Identical Content</p>
-        <p className="mt-1 text-xs text-slate-500">No differences detected between these two versions.</p>
+        <p className="mt-3 text-sm font-semibold text-slate-800 dark:text-slate-200">Identical Code</p>
+        <p className="mt-1 text-xs text-slate-500">
+          No differences found between {oldTitle} and {newTitle}.
+        </p>
       </div>
     );
   }
@@ -59,7 +120,7 @@ const DiffViewer = memo(function DiffViewer({
       animate={{ opacity: 1, y: 0 }}
       className="overflow-hidden rounded-xl border border-slate-200 dark:border-[#30363d] bg-white dark:bg-[#0d1117] shadow-sm dark:shadow-2xl"
     >
-      {/* VS Code Tab Bar & Toolbar */}
+      {/* Tab Bar & Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-[#30363d] bg-slate-50 dark:bg-[#161b22] px-3.5 py-2 text-xs">
         {/* Left: Tab Indicator & Diff Stats */}
         <div className="flex flex-wrap items-center gap-2.5">

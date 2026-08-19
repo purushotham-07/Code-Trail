@@ -147,6 +147,16 @@ export const editSnippet = async (req, res) => {
       return res.status(404).json({ message: 'Snippet not found' });
     }
 
+    // Guard against rapid duplicate double-clicks
+    const latestVersion = await Version.findOne({ snippetId: snippet._id }).sort({ versionNumber: -1 });
+    if (
+      latestVersion &&
+      latestVersion.commitMessage === (req.body.commitMessage?.trim() || `Version ${snippet.currentVersion}`) &&
+      Date.now() - new Date(latestVersion.createdAt).getTime() < 3000
+    ) {
+      return res.json({ snippet });
+    }
+
     const nextVersion = snippet.currentVersion + 1;
     const code = req.body.code ?? '';
 

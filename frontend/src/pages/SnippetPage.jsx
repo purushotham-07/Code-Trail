@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import CodeEditor from '../components/CodeEditor.jsx';
 import DiffViewer from '../components/DiffViewer.jsx';
 import { CodeEditorSkeleton } from '../components/LoadingSkeleton.jsx';
@@ -9,6 +9,7 @@ import VersionHistory from '../components/VersionHistory.jsx';
 import DsaStudentToolkit from '../components/DsaStudentToolkit.jsx';
 import api from '../services/api.js';
 import { useAuth } from '../store/AuthContext.jsx';
+import { useTheme } from '../store/ThemeContext.jsx';
 import {
   DSA_LANGUAGES,
   SQL_LANGUAGES,
@@ -18,6 +19,7 @@ import {
   SQL_DIALECTS,
   DEFAULT_MOCK_SQL_SCHEMA,
   DSA_PATTERN_GUIDE,
+  STARTER_BOILERPLATES,
 } from '../utils/languages.js';
 
 function extractErrorLines(errors = []) {
@@ -35,15 +37,15 @@ function extractErrorLines(errors = []) {
   return Array.from(lineNumbers).sort((a, b) => a - b);
 }
 
-const getDifficultyClass = (difficulty) => {
+const getDifficultyPill = (difficulty) => {
   switch (difficulty) {
     case 'Easy':
-      return 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+      return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30';
     case 'Hard':
-      return 'bg-rose-500/15 text-rose-400 border-rose-500/30';
+      return 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border-rose-500/30';
     case 'Medium':
     default:
-      return 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+      return 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30';
   }
 };
 
@@ -51,6 +53,7 @@ export default function SnippetPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { theme, toggleTheme, isDark } = useTheme();
 
   const [snippet, setSnippet] = useState(null);
   const [versions, setVersions] = useState([]);
@@ -60,59 +63,58 @@ export default function SnippetPage() {
   const [loading, setLoading] = useState(true);
   const [versionLoading, setVersionLoading] = useState(false);
 
-  // Edit Mode state
-  const [editing, setEditing] = useState(false);
+  // LeetCode Left Panel active tab: 'description' | 'hints' | 'toolkit' | 'editorial' | 'versions' | 'solutions'
+  const [leftTab, setLeftTab] = useState('description');
+
+  // Save Version Modal / Form state
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [saveCommitMessage, setSaveCommitMessage] = useState('');
+  const [savingVersion, setSavingVersion] = useState(false);
+
+  // Edit Problem Details Modal (Title, Difficulty, Topic, Problem Statement)
+  const [showEditDetailsModal, setShowEditDetailsModal] = useState(false);
   const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editDomain, setEditDomain] = useState('dsa');
   const [editDifficulty, setEditDifficulty] = useState('Medium');
   const [editTopic, setEditTopic] = useState('General');
   const [editLanguage, setEditLanguage] = useState('python');
-  const [editTags, setEditTags] = useState('');
-  const [editIsPublic, setEditIsPublic] = useState(true);
-  const [editCode, setEditCode] = useState('');
-  const [editCommitMessage, setEditCommitMessage] = useState('');
   const [editProblemStatement, setEditProblemStatement] = useState('');
   const [editTargetTime, setEditTargetTime] = useState('');
   const [editTargetSpace, setEditTargetSpace] = useState('');
   const [editSqlSchema, setEditSqlSchema] = useState('');
-  const [editSqlDialect, setEditSqlDialect] = useState('standard');
+  const [savingDetails, setSavingDetails] = useState(false);
 
+  // Error & Social state
   const [error, setError] = useState('');
   const [likeCount, setLikeCount] = useState(0);
   const [liked, setLiked] = useState(false);
   const [comments, setComments] = useState([]);
-  const [commentPage, setCommentPage] = useState(1);
-  const [commentTotalPages, setCommentTotalPages] = useState(1);
   const [commentInput, setCommentInput] = useState('');
   const [commentSubmitting, setCommentSubmitting] = useState(false);
 
+  // AI Analysis state
   const [analysis, setAnalysis] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const cooldownActive = cooldownLeft > 0;
 
   // Polyglot Rosetta State (for DSA)
+  const [showPolyglot, setShowPolyglot] = useState(false);
   const [activePolyglotLang, setActivePolyglotLang] = useState('python');
   const [polyglotTranslations, setPolyglotTranslations] = useState({});
   const [translatingPolyglot, setTranslatingPolyglot] = useState(false);
 
-  // SQL Schema & View Tab State
-  const [activeViewTab, setActiveViewTab] = useState('code'); // 'code' | 'schema' | 'rosetta' | 'guide'
-
-  // Student Mastery: Progressive Hint Unlocking (1, 2, 3)
+  // Progressive Hint Ladder Unlocking
   const [revealedHints, setRevealedHints] = useState(new Set());
 
-  // Student Mastery: Reveal Solution on Demand
+  // Solution Code on Demand
   const [showSolutionCode, setShowSolutionCode] = useState(false);
   const [activeCodeTab, setActiveCodeTab] = useState('optimized'); // 'optimized' | 'corrected'
   const [copiedCode, setCopiedCode] = useState(false);
 
-  const [showProblemStatement, setShowProblemStatement] = useState(true);
-
-  // Diff comparison states
-  const [compareFrom, setCompareFrom] = useState(null);
-  const [compareTo, setCompareTo] = useState(null);
+  // Diff comparison modal / view
+  const [showDiffView, setShowDiffView] = useState(false);
+  const [compareFrom, setCompareFrom] = useState(1);
+  const [compareTo, setCompareTo] = useState(1);
 
   // Live countdown for AI cooldown
   useEffect(() => {
@@ -159,14 +161,20 @@ export default function SnippetPage() {
     setLoading(true);
     try {
       const res = await api.get(`/snippets/${id}`);
-      const s = res.data.snippet;
-      setSnippet(s);
-      if (s.polyglotSolutions) {
-        setPolyglotTranslations(s.polyglotSolutions);
+      setSnippet(res.data.snippet);
+      setEditTitle(res.data.snippet.title || '');
+      setEditDifficulty(res.data.snippet.difficulty || 'Medium');
+      setEditTopic(res.data.snippet.topic || 'General');
+      setEditLanguage(res.data.snippet.language || 'python');
+      setEditProblemStatement(res.data.snippet.problemStatement || '');
+      setEditTargetTime(res.data.snippet.targetTimeComplexity || '');
+      setEditTargetSpace(res.data.snippet.targetSpaceComplexity || '');
+      setEditSqlSchema(res.data.snippet.sqlSchema || DEFAULT_MOCK_SQL_SCHEMA);
+      if (res.data.snippet.polyglotSolutions) {
+        setPolyglotTranslations(res.data.snippet.polyglotSolutions);
       }
-      setActivePolyglotLang(s.language === 'sql' ? 'python' : s.language || 'python');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to load problem');
+    } catch (_err) {
+      setError('Problem not found or failed to load.');
     } finally {
       setLoading(false);
     }
@@ -175,10 +183,18 @@ export default function SnippetPage() {
   const loadVersions = useCallback(async () => {
     try {
       const res = await api.get(`/versions/${id}/history`);
-      setVersions(res.data.versions || []);
-      if (res.data.versions?.length > 0) {
-        const latest = res.data.versions[res.data.versions.length - 1];
+      const vList = res.data.versions || [];
+      setVersions(vList);
+      if (vList.length > 0) {
+        const latest = vList[vList.length - 1];
         setSelectedVersion(latest.versionNumber);
+        if (vList.length >= 2) {
+          setCompareFrom(vList[vList.length - 2].versionNumber);
+          setCompareTo(latest.versionNumber);
+        } else {
+          setCompareFrom(1);
+          setCompareTo(1);
+        }
       }
     } catch (_error) {
       setVersions([]);
@@ -196,29 +212,25 @@ export default function SnippetPage() {
     }
   }, [id, user]);
 
-  const loadComments = useCallback(
-    async (targetPage = 1) => {
-      try {
-        const res = await api.get(`/comments/${id}`, {
-          params: { page: targetPage, limit: 10 },
-        });
-        setComments(res.data.comments || []);
-        setCommentPage(res.data.pagination?.page || 1);
-        setCommentTotalPages(res.data.pagination?.totalPages || 1);
-      } catch (_error) {
-        // Ignore
-      }
-    },
-    [id]
-  );
+  const loadComments = useCallback(async () => {
+    try {
+      const res = await api.get(`/comments/${id}`, {
+        params: { page: 1, limit: 50 },
+      });
+      setComments(res.data.comments || []);
+    } catch (_error) {
+      // Ignore
+    }
+  }, [id]);
 
   useEffect(() => {
     loadSnippet();
     loadVersions();
     loadLikeStatus();
-    loadComments(1);
+    loadComments();
   }, [loadSnippet, loadVersions, loadLikeStatus, loadComments]);
 
+  // Load code for active selected version
   useEffect(() => {
     if (!selectedVersion || loading) return;
     setCodeLoaded(false);
@@ -231,8 +243,6 @@ export default function SnippetPage() {
         setAnalysis(null);
         setRevealedHints(new Set());
         setShowSolutionCode(false);
-        setCompareFrom(null);
-        setCompareTo(null);
       })
       .catch((_err) => {
         setCurrentCode('');
@@ -244,67 +254,96 @@ export default function SnippetPage() {
       });
   }, [id, selectedVersion, loading]);
 
-  const handleStartEdit = () => {
-    if (!snippet) return;
-    setEditTitle(snippet.title || '');
-    setEditDescription(snippet.description || '');
-    setEditDomain(snippet.domain || (snippet.language === 'sql' ? 'sql' : 'dsa'));
-    setEditDifficulty(snippet.difficulty || 'Medium');
-    setEditTopic(snippet.topic || 'General');
-    setEditLanguage(snippet.language || 'python');
-    setEditTags(Array.isArray(snippet.tags) ? snippet.tags.join(', ') : '');
-    setEditIsPublic(snippet.isPublic !== false);
-    setEditProblemStatement(snippet.problemStatement || '');
-    setEditTargetTime(snippet.targetTimeComplexity || '');
-    setEditTargetSpace(snippet.targetSpaceComplexity || '');
-    setEditSqlSchema(snippet.sqlSchema || DEFAULT_MOCK_SQL_SCHEMA);
-    setEditSqlDialect(snippet.sqlDialect || 'standard');
-    setEditCode(currentCode);
-    setEditCommitMessage('');
-    setEditing(true);
+  // Handle Save New Version (with double-click protection)
+  const handleSaveVersion = async (e) => {
+    if (e) e.preventDefault();
+    if (!user) {
+      setError('Please sign in to save your solution.');
+      return;
+    }
+    if (!isOwner) {
+      setError('You are viewing a community problem. Click "Fork" to save your personal version history.');
+      return;
+    }
+    if (savingVersion) return; // Prevent duplicate rapid submission
+
+    setSavingVersion(true);
+    setError('');
+
+    const nextVer = (snippet?.currentVersion || 1) + 1;
+    const note = saveCommitMessage.trim() || `Iteration v${nextVer}`;
+
+    try {
+      await api.put(`/snippets/${id}`, {
+        title: snippet.title,
+        description: snippet.description,
+        domain: snippet.domain,
+        difficulty: snippet.difficulty,
+        topic: snippet.topic,
+        language: snippet.language,
+        tags: snippet.tags,
+        isPublic: snippet.isPublic,
+        code: currentCode,
+        commitMessage: note,
+        problemStatement: snippet.problemStatement,
+        targetTimeComplexity: snippet.targetTimeComplexity,
+        targetSpaceComplexity: snippet.targetSpaceComplexity,
+        sqlSchema: snippet.sqlSchema,
+        sqlDialect: snippet.sqlDialect,
+      });
+
+      setShowSaveModal(false);
+      setSaveCommitMessage('');
+      await Promise.all([loadSnippet(), loadVersions()]);
+      setSelectedVersion(nextVer);
+      setLeftTab('versions');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save version.');
+    } finally {
+      setSavingVersion(false);
+    }
   };
 
-  const handleSaveEdit = async () => {
-    if (!isOwner || !editCommitMessage.trim()) return;
+  // Handle Edit Problem Details
+  const handleSaveProblemDetails = async (e) => {
+    if (e) e.preventDefault();
+    if (!isOwner || savingDetails) return;
+
+    setSavingDetails(true);
     try {
       await api.put(`/snippets/${id}`, {
         title: editTitle.trim(),
-        description: editDescription.trim(),
-        domain: editDomain,
         difficulty: editDifficulty,
         topic: editTopic.trim(),
         language: editLanguage.trim().toLowerCase(),
-        tags: editTags
-          .split(',')
-          .map((t) => t.trim().toLowerCase())
-          .filter(Boolean),
-        isPublic: editIsPublic,
-        code: editCode,
-        commitMessage: editCommitMessage.trim(),
         problemStatement: editProblemStatement.trim(),
         targetTimeComplexity: editTargetTime.trim(),
         targetSpaceComplexity: editTargetSpace.trim(),
         sqlSchema: editSqlSchema.trim(),
-        sqlDialect: editSqlDialect,
+        code: currentCode,
+        commitMessage: `Updated problem parameters`,
       });
-      setEditing(false);
-      setEditCommitMessage('');
+      setShowEditDetailsModal(false);
       await Promise.all([loadSnippet(), loadVersions()]);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save version');
+      setError(err.response?.data?.message || 'Failed to update problem details.');
+    } finally {
+      setSavingDetails(false);
     }
   };
 
+  // Handle AI Code Review & Diagnostics
   const handleAnalyze = useCallback(async () => {
     if (!canAnalyze) {
       setError('Please sign in to run AI analysis.');
       return;
     }
     if (!currentCode.trim()) return;
-    if (cooldownActive) return;
+    if (cooldownActive || analysisLoading) return;
 
     try {
       setAnalysisLoading(true);
+      setError('');
       const res = await api.post('/analysis/analyze', {
         code: currentCode,
         language: snippet?.language || 'python',
@@ -324,7 +363,7 @@ export default function SnippetPage() {
       }
       setRevealedHints(new Set());
       setShowSolutionCode(false);
-      setError('');
+      setLeftTab('editorial'); // Switch to Editorial / Review tab automatically!
     } catch (err) {
       const status = err.response?.status;
       const message = err.response?.data?.message || 'AI analysis failed. Please try again.';
@@ -338,78 +377,68 @@ export default function SnippetPage() {
     } finally {
       setAnalysisLoading(false);
     }
-  }, [canAnalyze, currentCode, snippet, id, selectedVersion, cooldownActive]);
+  }, [canAnalyze, currentCode, snippet, id, selectedVersion, cooldownActive, analysisLoading]);
 
+  // Handle Polyglot Translation
   const handleTranslatePolyglot = async (targetLang) => {
-    if (!currentCode.trim()) return;
+    if (!currentCode.trim() || translatingPolyglot) return;
     try {
       setTranslatingPolyglot(true);
       const res = await api.post('/analysis/translate', {
         code: currentCode,
         fromLanguage: snippet?.language || 'python',
         toLanguage: targetLang,
+        domain: snippet?.domain || 'dsa',
+        snippetId: id,
       });
       if (res.data.translatedCode) {
-        setPolyglotTranslations((prev) => ({
-          ...prev,
-          [targetLang]: res.data.translatedCode,
-        }));
+        setPolyglotTranslations((prev) => ({ ...prev, [targetLang]: res.data.translatedCode }));
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Translation failed.');
+    } catch (_err) {
+      setError(`Failed to translate into ${targetLang}.`);
     } finally {
       setTranslatingPolyglot(false);
     }
   };
 
-  const handleCopyCode = (codeText) => {
-    if (!codeText) return;
-    navigator.clipboard.writeText(codeText);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2000);
-  };
-
   const handleToggleLike = async () => {
     if (!user) {
-      setError('Please sign in to like this problem');
+      setError('Please sign in to like this problem.');
       return;
     }
     try {
       const res = await api.post(`/likes/${id}`);
       setLiked(res.data.liked);
       setLikeCount(res.data.likeCount);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to toggle like');
+    } catch (_error) {
+      // Ignore
     }
   };
 
   const handleFork = async () => {
     if (!user) {
-      setError('Please sign in to fork this problem');
+      setError('Please sign in to fork this problem.');
       return;
     }
     try {
       const res = await api.post(`/snippets/${id}/fork`);
       navigate(`/snippet/${res.data.snippet._id}`);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to fork problem');
+      setError(err.response?.data?.message || 'Failed to fork problem.');
     }
   };
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (!user) {
-      setError('Please sign in to comment');
-      return;
-    }
-    if (!commentInput.trim()) return;
+    if (!commentInput.trim() || !user || commentSubmitting) return;
+
     setCommentSubmitting(true);
     try {
-      await api.post(`/comments/${id}`, { content: commentInput.trim() });
+      const res = await api.post(`/comments/${id}`, { content: commentInput.trim() });
+      setComments((prev) => [res.data.comment, ...prev]);
       setCommentInput('');
-      await loadComments(1);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to add comment');
+      setError(err.response?.data?.message || 'Failed to add comment.');
     } finally {
       setCommentSubmitting(false);
     }
@@ -418,1047 +447,1021 @@ export default function SnippetPage() {
   const handleDeleteComment = async (commentId) => {
     try {
       await api.delete(`/comments/${commentId}`);
-      await loadComments(commentPage);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete comment');
+      setComments((prev) => prev.filter((c) => c._id !== commentId));
+    } catch (_err) {
+      // Ignore
     }
   };
 
-  const patternGuide = snippet?.topic ? DSA_PATTERN_GUIDE[snippet.topic] : null;
+  const handleCopyCode = (code) => {
+    navigator.clipboard.writeText(code);
+    setCopiedCode(true);
+    setTimeout(() => setCopiedCode(false), 1800);
+  };
 
-  if (loading) {
+  const patternGuide = DSA_PATTERN_GUIDE[snippet?.topic];
+
+  if (loading && !snippet) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50">
         <Navbar />
-        <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="mx-auto max-w-7xl px-4 py-8">
           <CodeEditorSkeleton />
-        </main>
+        </div>
       </div>
     );
   }
 
   if (!snippet) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-50">
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50">
         <Navbar />
-        <main className="mx-auto max-w-6xl px-4 py-12 text-center">
-          <p className="text-base text-slate-400">Problem not found.</p>
-        </main>
+        <div className="mx-auto max-w-4xl px-4 py-16 text-center">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-200">Problem Not Found</h2>
+          <p className="mt-2 text-sm text-slate-500">This problem may have been removed or made private.</p>
+          <Link to="/" className="mt-4 inline-block rounded bg-blue-600 px-4 py-2 text-xs font-semibold text-white">
+            Back to Problem List
+          </Link>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-50 transition-colors">
+    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-[#1a1a1a] text-slate-900 dark:text-slate-100 transition-colors">
       <Navbar />
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {error && (
-          <div className="mb-4 flex items-center justify-between rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 p-3 text-xs text-rose-700 dark:text-rose-300 shadow-sm">
-            <span>{error}</span>
-            <button type="button" onClick={() => setError('')} className="text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white">
-              ✕
-            </button>
-          </div>
-        )}
 
-        {/* HEADER: Title, Clean Badges, Author & Action Buttons */}
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-6 space-y-3">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span
-                  className={`rounded px-2.5 py-0.5 text-xs font-bold border ${
-                    isSql
-                      ? 'bg-emerald-50 dark:bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30'
-                      : 'bg-blue-50 dark:bg-blue-600/15 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/30'
-                  }`}
-                >
-                  {isSql ? 'SQL Studio' : 'DSA Arena'}
-                </span>
+      {/* ERROR BANNER */}
+      {error && (
+        <div className="bg-rose-500/10 border-b border-rose-500/20 px-4 py-2 text-xs text-rose-600 dark:text-rose-400 flex items-center justify-between">
+          <span>{error}</span>
+          <button type="button" onClick={() => setError('')} className="hover:underline font-bold">
+            ✕
+          </button>
+        </div>
+      )}
 
-                {snippet.difficulty && (
-                  <span className={`rounded px-2.5 py-0.5 text-xs font-bold border ${getDifficultyClass(snippet.difficulty)}`}>
-                    {snippet.difficulty}
-                  </span>
-                )}
+      {/* TOP LEETCODE-STYLE SUBHEADER BAR */}
+      <header className="border-b border-slate-200 dark:border-[#2e2e2e] bg-white dark:bg-[#262626] px-4 py-2.5 transition-colors">
+        <div className="mx-auto flex flex-wrap items-center justify-between gap-3 max-w-7xl">
+          {/* Left: Problem Title, Badges & Domain */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/"
+              className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center gap-1 font-medium"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="15 18 9 12 15 6" />
+              </svg>
+              Problem List
+            </Link>
 
-                {snippet.topic && (
-                  <span className="rounded bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                    {snippet.topic}
-                  </span>
-                )}
+            <span className="text-slate-300 dark:text-[#404040]">|</span>
 
-                <span className="rounded bg-slate-100 dark:bg-slate-900 px-2.5 py-0.5 font-mono text-xs text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800">
-                  {snippet.language?.toUpperCase()}
-                </span>
-              </div>
+            <span
+              className={`rounded px-2 py-0.5 text-[11px] font-bold border ${
+                isSql
+                  ? 'bg-emerald-50 dark:bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-emerald-300 dark:border-emerald-500/30'
+                  : 'bg-blue-50 dark:bg-blue-600/15 text-blue-700 dark:text-blue-400 border-blue-300 dark:border-blue-500/30'
+              }`}
+            >
+              {isSql ? 'SQL' : 'DSA'}
+            </span>
 
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{snippet.title}</h1>
-              {snippet.description && <p className="text-xs text-slate-600 dark:text-slate-400">{snippet.description}</p>}
-            </div>
+            <h1 className="text-sm font-bold text-slate-900 dark:text-white">{snippet.title}</h1>
 
-            {/* Actions: Like, Fork, Edit */}
-            <div className="flex flex-wrap items-center gap-2">
+            {snippet.difficulty && (
+              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold border ${getDifficultyPill(snippet.difficulty)}`}>
+                {snippet.difficulty}
+              </span>
+            )}
+
+            {snippet.topic && snippet.topic !== 'General' && (
+              <span className="rounded bg-slate-100 dark:bg-[#333333] px-2 py-0.5 text-[10px] font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#404040]">
+                {snippet.topic}
+              </span>
+            )}
+
+            {isOwner && (
               <button
                 type="button"
-                onClick={handleToggleLike}
-                className={`flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  liked
-                    ? 'border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400'
-                    : 'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm'
-                }`}
+                onClick={() => setShowEditDetailsModal(true)}
+                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
               >
-                <span>{liked ? 'Liked' : 'Like'}</span>
-                <span>({likeCount})</span>
+                Edit Details
               </button>
-
-              <button
-                type="button"
-                onClick={handleFork}
-                className="flex items-center gap-1.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 shadow-sm"
-              >
-                <span>Fork</span>
-              </button>
-
-              {isOwner && !editing && (
-                <button
-                  type="button"
-                  onClick={handleStartEdit}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 shadow-sm"
-                >
-                  <span>Edit Version {snippet.currentVersion + 1}</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Complexity Target & Evolution Banner */}
-          {(snippet.targetTimeComplexity || snippet.targetSpaceComplexity || versions.length > 1) && (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-3 text-xs shadow-sm">
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex items-center gap-1.5 font-mono text-slate-600 dark:text-slate-400">
-                  <span className="text-slate-500 font-sans">Target:</span>
-                  {snippet.targetTimeComplexity && (
-                    <span className="rounded bg-slate-100 dark:bg-slate-950 px-2 py-0.5 text-blue-700 dark:text-blue-300 border border-slate-200 dark:border-slate-800 font-semibold">
-                      Time: {snippet.targetTimeComplexity}
-                    </span>
-                  )}
-                  {snippet.targetSpaceComplexity && (
-                    <span className="rounded bg-slate-100 dark:bg-slate-950 px-2 py-0.5 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-800 font-semibold">
-                      Space: {snippet.targetSpaceComplexity}
-                    </span>
-                  )}
-                </div>
-
-                {analysis && (
-                  <div className="flex items-center gap-1.5 font-mono">
-                    <span className="text-slate-500 font-sans">Evaluated:</span>
-                    <span className="rounded bg-slate-100 dark:bg-slate-950 px-2 py-0.5 text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-slate-800 font-semibold">
-                      Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity || 'Evaluated'}
-                    </span>
-                    <span className="rounded bg-slate-100 dark:bg-slate-950 px-2 py-0.5 text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-slate-800 font-semibold">
-                      Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity || 'Evaluated'}
-                    </span>
-                    {analysis.targetComplexityMet && (
-                      <span className="rounded bg-emerald-50 dark:bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-500/40 font-sans">
-                        Target Met
-                      </span>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* Version History Progression Trail */}
-              {versions.length > 1 && (
-                <div className="flex items-center gap-1 font-mono text-[11px] text-slate-600 dark:text-slate-400">
-                  <span className="text-slate-500 font-sans">Evolution:</span>
-                  {versions.slice(-4).map((v, i, arr) => (
-                    <span key={v.versionNumber} className="flex items-center gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedVersion(v.versionNumber)}
-                        className={`rounded px-1.5 py-0.5 ${
-                          selectedVersion === v.versionNumber
-                            ? 'bg-blue-600 text-white font-bold'
-                            : 'bg-slate-100 dark:bg-slate-950 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                      >
-                        v{v.versionNumber}
-                      </button>
-                      {i < arr.length - 1 && <span className="text-slate-400 dark:text-slate-600 font-sans">to</span>}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </motion.div>
-
-        {/* Problem Statement Card (Collapsible) */}
-        {!editing && snippet.problemStatement && (
-          <div className="mb-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-800 dark:text-slate-300">
-                Problem Description & Constraints
-              </h2>
-              <button
-                type="button"
-                onClick={() => setShowProblemStatement((prev) => !prev)}
-                className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                {showProblemStatement ? 'Hide Description' : 'Show Description'}
-              </button>
-            </div>
-            {showProblemStatement && (
-              <p className="mt-3 whitespace-pre-wrap font-mono text-xs text-slate-800 dark:text-slate-300 leading-relaxed bg-slate-50 dark:bg-slate-950 p-3.5 rounded-lg border border-slate-200 dark:border-slate-800">
-                {snippet.problemStatement}
-              </p>
             )}
           </div>
-        )}
 
-        {/* EDIT MODE */}
-        {editing && isOwner ? (
+          {/* Right: Actions, Version Picker, Diff & Like */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Version Picker Pill */}
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#1a1a1a] rounded-lg p-0.5 border border-slate-200 dark:border-[#3a3a3a] text-xs">
+              <span className="px-2 text-[11px] text-slate-500 font-mono">v{selectedVersion || snippet.currentVersion}</span>
+              {versions.length > 1 && (
+                <select
+                  value={selectedVersion || snippet.currentVersion}
+                  onChange={(e) => setSelectedVersion(Number(e.target.value))}
+                  className="bg-transparent text-xs text-slate-700 dark:text-slate-200 focus:outline-none pr-1 cursor-pointer font-mono"
+                >
+                  {versions.map((v) => (
+                    <option key={`top-ver-${v.versionNumber}`} value={v.versionNumber} className="bg-white dark:bg-[#262626]">
+                      v{v.versionNumber} ({new Date(v.createdAt).toLocaleDateString()})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+
+            {/* Compare Diff Toggle */}
+            <button
+              type="button"
+              onClick={() => setShowDiffView((prev) => !prev)}
+              className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors border ${
+                showDiffView
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                  : 'bg-white dark:bg-[#262626] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#3a3a3a] hover:bg-slate-100 dark:hover:bg-[#333333]'
+              }`}
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="12" y1="3" x2="12" y2="21" />
+              </svg>
+              <span>{showDiffView ? 'Hide Diff' : 'Compare Diff'}</span>
+            </button>
+
+            {/* Like */}
+            <button
+              type="button"
+              onClick={handleToggleLike}
+              className={`flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-semibold border transition-colors ${
+                liked
+                  ? 'border-rose-300 dark:border-rose-500/40 bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400'
+                  : 'border-slate-200 dark:border-[#3a3a3a] bg-white dark:bg-[#262626] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#333333]'
+              }`}
+            >
+              <span>{liked ? '❤️' : '🤍'}</span>
+              <span>{likeCount}</span>
+            </button>
+
+            {/* Fork */}
+            <button
+              type="button"
+              onClick={handleFork}
+              className="flex items-center gap-1 rounded-lg border border-slate-200 dark:border-[#3a3a3a] bg-white dark:bg-[#262626] px-2.5 py-1 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#333333]"
+            >
+              Fork
+            </button>
+
+            {/* Save New Version Button */}
+            {isOwner ? (
+              <button
+                type="button"
+                onClick={() => setShowSaveModal(true)}
+                className="flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1 text-xs font-semibold text-white hover:bg-emerald-500 shadow-sm"
+              >
+                <span>+</span>
+                <span>Save Version</span>
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </header>
+
+      {/* VERSION DIFF MODAL / DRAWER (When Compare Diff is active) */}
+      <AnimatePresence>
+        {showDiffView && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="rounded-xl border border-slate-800 bg-slate-900 p-6 space-y-4 shadow-xl mb-6"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="border-b border-slate-200 dark:border-[#333333] bg-slate-100 dark:bg-[#161616] p-4 transition-colors"
           >
-            <h2 className="text-lg font-bold text-white">
-              Edit Problem & Publish Version {snippet.currentVersion + 1}
-            </h2>
+            <div className="mx-auto max-w-7xl space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Compare Base:</span>
+                  <select
+                    value={compareFrom}
+                    onChange={(e) => setCompareFrom(Number(e.target.value))}
+                    className="rounded border border-slate-300 dark:border-[#404040] bg-white dark:bg-[#262626] px-2.5 py-1 text-xs text-slate-900 dark:text-slate-200"
+                  >
+                    {versions.map((v) => (
+                      <option key={`diff-from-${v.versionNumber}`} value={v.versionNumber}>
+                        Version {v.versionNumber} ({v.commitMessage || 'Snapshot'})
+                      </option>
+                    ))}
+                  </select>
 
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="md:col-span-2">
-                <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">Title</label>
-                <input
-                  type="text"
-                  value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">Difficulty</label>
-                <select
-                  value={editDifficulty}
-                  onChange={(e) => setEditDifficulty(e.target.value)}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-                >
-                  {DIFFICULTIES.map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                  <span className="text-slate-400 font-bold">↔</span>
 
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">Pattern / Topic</label>
-                <select
-                  value={editTopic}
-                  onChange={(e) => setEditTopic(e.target.value)}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-                >
-                  {(editDomain === 'sql' ? SQL_TOPICS : DSA_TOPICS).map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">Language</label>
-                <select
-                  value={editLanguage}
-                  onChange={(e) => setEditLanguage(e.target.value)}
-                  className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 focus:border-blue-500 focus:outline-none"
-                >
-                  {(editDomain === 'sql' ? SQL_LANGUAGES : DSA_LANGUAGES).map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
+                  <span className="font-semibold text-slate-700 dark:text-slate-300">Target:</span>
+                  <select
+                    value={compareTo}
+                    onChange={(e) => setCompareTo(Number(e.target.value))}
+                    className="rounded border border-slate-300 dark:border-[#404040] bg-white dark:bg-[#262626] px-2.5 py-1 text-xs text-slate-900 dark:text-slate-200"
+                  >
+                    {versions.map((v) => (
+                      <option key={`diff-to-${v.versionNumber}`} value={v.versionNumber}>
+                        Version {v.versionNumber} ({v.commitMessage || 'Snapshot'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">Problem Statement</label>
-              <textarea
-                value={editProblemStatement}
-                onChange={(e) => setEditProblemStatement(e.target.value)}
-                rows={3}
-                className="w-full rounded-md border border-slate-700 bg-slate-950 p-2.5 font-mono text-xs text-slate-200 focus:border-blue-500 focus:outline-none"
+                <button
+                  type="button"
+                  onClick={() => setShowDiffView(false)}
+                  className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                >
+                  Close Diff
+                </button>
+              </div>
+
+              {/* Dynamic Diff Viewer */}
+              <DiffViewer
+                snippetId={id}
+                baseVersion={compareFrom}
+                compareVersion={compareTo}
+                oldTitle={`v${compareFrom}`}
+                newTitle={`v${compareTo}`}
               />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">Solution Code</label>
-              <CodeEditor value={editCode} onChange={setEditCode} language={editLanguage} height="360px" />
-            </div>
-
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold uppercase text-slate-300">
-                Version Note <span className="text-rose-400">*</span>
-              </label>
-              <input
-                type="text"
-                value={editCommitMessage}
-                onChange={(e) => setEditCommitMessage(e.target.value)}
-                placeholder="e.g. Optimized inner loop to use HashMap O(n) (required)"
-                className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-slate-200 placeholder-slate-500 focus:border-blue-500 focus:outline-none"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setEditing(false)}
-                className="rounded-lg border border-slate-700 px-4 py-2 text-xs text-slate-300 hover:bg-slate-800"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveEdit}
-                disabled={!editCommitMessage.trim()}
-                className="rounded-lg bg-blue-600 px-5 py-2 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
-              >
-                Save Version {snippet.currentVersion + 1}
-              </button>
             </div>
           </motion.div>
-        ) : null}
+        )}
+      </AnimatePresence>
 
-        {/* WORKSPACE & VIEW TABS */}
-        <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
-          {/* LEFT: Code / Diff / Polyglot / Schema Workspace */}
-          <div className="space-y-6">
-            {/* View Mode Tabs */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-              <div className="flex rounded-lg bg-white dark:bg-slate-900 p-1 border border-slate-200 dark:border-slate-800 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setActiveViewTab('code')}
-                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                    activeViewTab === 'code' ? 'bg-blue-600 text-white shadow-sm' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
-                >
-                  Code (v{selectedVersion || snippet.currentVersion})
-                </button>
+      {/* MAIN LEETCODE 2-COLUMN SPLIT WORKSPACE */}
+      <main className="flex-1 mx-auto w-full max-w-7xl px-3 py-3 grid gap-3 lg:grid-cols-2">
+        {/* LEFT COLUMN: Problem Description, Hints, Toolkit, Editorial, Versions & Solutions */}
+        <section className="flex flex-col rounded-xl border border-slate-200 dark:border-[#2e2e2e] bg-white dark:bg-[#262626] shadow-sm overflow-hidden min-h-[580px]">
+          {/* LeetCode Tab Header */}
+          <div className="flex items-center gap-1 border-b border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#202020] px-3 pt-2 overflow-x-auto">
+            <button
+              type="button"
+              onClick={() => setLeftTab('description')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                leftTab === 'description'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-[#262626] rounded-t-md'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Description</span>
+            </button>
 
-                {!isSql && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveViewTab('rosetta')}
-                    className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                      activeViewTab === 'rosetta'
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-300'
-                    }`}
-                  >
-                    Polyglot Rosetta (4 Languages)
-                  </button>
-                )}
+            <button
+              type="button"
+              onClick={() => setLeftTab('hints')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                leftTab === 'hints'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-[#262626] rounded-t-md'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Hints</span>
+              {analysis?.hints?.length ? (
+                <span className="rounded-full bg-blue-100 dark:bg-blue-900/60 px-1.5 text-[10px] text-blue-700 dark:text-blue-300">
+                  {analysis.hints.length}
+                </span>
+              ) : null}
+            </button>
 
-                {patternGuide && !isSql && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveViewTab('guide')}
-                    className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                      activeViewTab === 'guide'
-                        ? 'bg-amber-600 text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-300'
-                    }`}
-                  >
-                    Pattern Guide ({snippet.topic})
-                  </button>
-                )}
+            {!isSql && (
+              <button
+                type="button"
+                onClick={() => setLeftTab('toolkit')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                  leftTab === 'toolkit'
+                    ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-[#262626] rounded-t-md'
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>Student Toolkit</span>
+              </button>
+            )}
 
-                {!isSql && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveViewTab('toolkit')}
-                    className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                      activeViewTab === 'toolkit'
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-300'
-                    }`}
-                  >
-                    Student Toolkit
-                  </button>
-                )}
+            <button
+              type="button"
+              onClick={() => setLeftTab('editorial')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                leftTab === 'editorial'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-[#262626] rounded-t-md'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Editorial & Review</span>
+              {analysis ? (
+                <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/60 px-1.5 text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">
+                  {analysis.overallScore}/10
+                </span>
+              ) : null}
+            </button>
 
-                {isSql && snippet.sqlSchema && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveViewTab('schema')}
-                    className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                      activeViewTab === 'schema'
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-300'
-                    }`}
-                  >
-                    Schema & Tables
-                  </button>
-                )}
-              </div>
+            <button
+              type="button"
+              onClick={() => setLeftTab('versions')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                leftTab === 'versions'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-[#262626] rounded-t-md'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Submissions ({versions.length})</span>
+            </button>
 
-              {/* Compare Diff Button */}
-              {versions.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const prev = versions[versions.length - 2]?.versionNumber || 1;
-                    const latest = versions[versions.length - 1]?.versionNumber || 2;
-                    setCompareFrom(prev);
-                    setCompareTo(latest);
-                  }}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                >
-                  Compare Version Diff
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={() => setLeftTab('solutions')}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border-b-2 transition-colors whitespace-nowrap ${
+                leftTab === 'solutions'
+                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 bg-white dark:bg-[#262626] rounded-t-md'
+                  : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              }`}
+            >
+              <span>Solutions ({comments.length})</span>
+            </button>
+          </div>
 
-            {/* VIEW 1: VS Code Version Diff View */}
-            {compareFrom && compareTo ? (
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 shadow-sm">
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="font-semibold text-slate-800 dark:text-slate-300">Comparing:</span>
-                    <select
-                      value={compareFrom}
-                      onChange={(e) => setCompareFrom(Number(e.target.value))}
-                      className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-xs text-slate-900 dark:text-slate-200"
-                    >
-                      {versions.map((v) => (
-                        <option key={`from-${v.versionNumber}`} value={v.versionNumber}>
-                          v{v.versionNumber}
-                        </option>
-                      ))}
-                    </select>
-                    <span className="text-slate-400 dark:text-slate-500">to</span>
-                    <select
-                      value={compareTo}
-                      onChange={(e) => setCompareTo(Number(e.target.value))}
-                      className="rounded border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-2 py-1 text-xs text-slate-900 dark:text-slate-200"
-                    >
-                      {versions.map((v) => (
-                        <option key={`to-${v.versionNumber}`} value={v.versionNumber}>
-                          v{v.versionNumber}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCompareFrom(null);
-                      setCompareTo(null);
-                    }}
-                    className="rounded bg-slate-100 dark:bg-slate-800 px-3 py-1 text-xs text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
-                  >
-                    Close Diff
-                  </button>
-                </div>
-
-                <DiffViewer snippetId={id} baseVersion={compareFrom} compareVersion={compareTo} />
-              </div>
-            ) : activeViewTab === 'rosetta' && !isSql ? (
-              /* VIEW 2: 4-Language Polyglot Rosetta View (Java, Python, C++, JS) */
-              <div className="rounded-xl border border-indigo-200 dark:border-indigo-900/50 bg-white dark:bg-slate-900 p-4 space-y-4 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Polyglot Rosetta</h3>
-                    <p className="text-[11px] text-slate-600 dark:text-slate-400">
-                      Compare idiomatic implementations across Java, Python, C++, and JavaScript.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleTranslatePolyglot(activePolyglotLang)}
-                    disabled={translatingPolyglot}
-                    className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50 shadow-sm"
-                  >
-                    {translatingPolyglot ? 'Translating…' : `Translate to ${activePolyglotLang}`}
-                  </button>
-                </div>
-
-                {/* 4 Language Tabs */}
-                <div className="flex flex-wrap gap-2">
-                  {DSA_LANGUAGES.map((l) => (
-                    <button
-                      key={l.id}
-                      type="button"
-                      onClick={() => setActivePolyglotLang(l.id)}
-                      className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
-                        activePolyglotLang === l.id
-                          ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                          : 'bg-slate-50 dark:bg-slate-950 text-slate-700 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <span>{l.label}</span>
-                      {polyglotTranslations[l.id] || (snippet.language === l.id) ? (
-                        <span className="rounded bg-emerald-100 dark:bg-emerald-500/20 px-1 text-[9px] text-emerald-700 dark:text-emerald-400 font-bold">Ready</span>
-                      ) : null}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Polyglot Code View */}
+          {/* Left Panel Tab Content */}
+          <div className="flex-1 p-5 overflow-y-auto max-h-[700px] space-y-4">
+            {/* TAB 1: DESCRIPTION */}
+            {leftTab === 'description' && (
+              <div className="space-y-4 text-xs">
+                {/* Title & Target Complexity */}
                 <div>
-                  <CodeEditor
-                    value={
-                      activePolyglotLang === snippet.language
-                        ? currentCode
-                        : polyglotTranslations[activePolyglotLang] ||
-                          `// Click "Translate to ${activePolyglotLang}" above to generate idiomatic ${activePolyglotLang} solution.`
-                    }
-                    language={activePolyglotLang}
-                    height="420px"
-                    readOnly
-                  />
-                </div>
-              </div>
-            ) : activeViewTab === 'guide' && patternGuide ? (
-              /* VIEW 3: Student Pattern Guide & Mental Models */
-              <div className="rounded-xl border border-amber-200 dark:border-amber-900/50 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm">
-                <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold text-amber-700 dark:text-amber-300">Pattern Guide: {snippet.topic}</h3>
-                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">Core algorithmic mental model and problem-solving blueprint.</p>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">{snippet.title}</h2>
+                  {(snippet.targetTimeComplexity || snippet.targetSpaceComplexity) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 font-mono">
+                      <span className="text-slate-500 font-sans">Target Complexity:</span>
+                      {snippet.targetTimeComplexity && (
+                        <span className="rounded bg-blue-50 dark:bg-[#1a1a1a] px-2 py-0.5 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-[#3a3a3a] font-semibold">
+                          Time: {snippet.targetTimeComplexity}
+                        </span>
+                      )}
+                      {snippet.targetSpaceComplexity && (
+                        <span className="rounded bg-indigo-50 dark:bg-[#1a1a1a] px-2 py-0.5 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-[#3a3a3a] font-semibold">
+                          Space: {snippet.targetSpaceComplexity}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
-                <div className="space-y-3 text-xs">
-                  <div className="rounded-lg bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">Key Algorithmic Invariant</span>
-                    <p className="text-slate-800 dark:text-slate-200 leading-relaxed">{patternGuide.invariant}</p>
-                  </div>
-
-                  <div className="rounded-lg bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">When to Recognize & Apply</span>
-                    <p className="text-slate-800 dark:text-slate-200 leading-relaxed">{patternGuide.bestFor}</p>
-                  </div>
-
-                  <div className="rounded-lg bg-slate-50 dark:bg-slate-950 p-3 border border-slate-200 dark:border-slate-800 space-y-1">
-                    <span className="font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider text-[10px]">Expected Complexity Benchmark</span>
-                    <p className="font-mono text-emerald-700 dark:text-emerald-300 font-semibold">{patternGuide.timeSpace}</p>
+                {/* Problem Statement Body */}
+                <div className="rounded-lg bg-slate-50 dark:bg-[#1e1e1e] p-4 border border-slate-200 dark:border-[#333333] leading-relaxed font-sans text-slate-800 dark:text-slate-200 space-y-3">
+                  <div className="whitespace-pre-wrap font-sans text-xs">
+                    {snippet.problemStatement || snippet.description || 'No problem statement provided.'}
                   </div>
                 </div>
-              </div>
-            ) : activeViewTab === 'toolkit' && !isSql ? (
-              /* VIEW: DSA Student Toolkit (4-Lang Syntax, Constraint Calculator, Pattern Tree) */
-              <DsaStudentToolkit />
-            ) : activeViewTab === 'schema' && isSql ? (
-              /* VIEW 4: SQL Mock Schema Viewer */
-              <div className="rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-sm">
-                <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Database Schema & Mock Records</h3>
-                  <p className="text-[11px] text-slate-600 dark:text-slate-400">Underlying tables and columns used in this query.</p>
-                </div>
-                <CodeEditor value={snippet.sqlSchema || DEFAULT_MOCK_SQL_SCHEMA} language="sql" height="380px" readOnly />
-              </div>
-            ) : (
-              /* VIEW 5: Standard Code Editor View */
-              <div className="space-y-3">
-                {versionLoading || !codeLoaded ? (
-                  <CodeEditorSkeleton />
-                ) : (
-                  <div className={`grid gap-3 ${hasErrors ? 'lg:grid-cols-[1fr_240px]' : 'grid-cols-1'}`}>
-                    <CodeEditor
-                      value={currentCode}
-                      language={snippet.language}
-                      height="480px"
-                      readOnly
-                      errorLines={errorLines}
-                    />
 
-                    {/* Error & Issue Sidebar if errors detected */}
-                    {hasErrors && (
-                      <aside className="max-h-[480px] overflow-auto rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 p-3.5 space-y-2.5 shadow-sm">
-                        <div className="flex items-center justify-between border-b border-rose-200 dark:border-rose-900/40 pb-2">
-                          <h3 className="text-xs font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">
-                            Issues ({analysis?.issues?.length || errorLines.length || 1})
-                          </h3>
-                        </div>
+                {/* SQL Schema Definition (if SQL) */}
+                {isSql && snippet.sqlSchema && (
+                  <div className="space-y-2">
+                    <h3 className="font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider text-[11px]">
+                      Database Tables & Schema
+                    </h3>
+                    <pre className="overflow-x-auto rounded bg-slate-50 dark:bg-[#1e1e1e] p-3 font-mono text-[11.5px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-[#333333] leading-relaxed">
+                      <code>{snippet.sqlSchema}</code>
+                    </pre>
+                  </div>
+                )}
 
-                        <div className="space-y-2">
-                          {analysis?.issues?.length > 0 ? (
-                            analysis.issues.map((iss, index) => (
-                              <div
-                                key={`iss-${index}`}
-                                className="rounded-lg border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-rose-950/40 p-2.5 text-xs shadow-sm"
-                              >
-                                <div className="flex items-center justify-between gap-1 mb-1">
-                                  <span
-                                    className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                      iss.severity === 'Critical'
-                                        ? 'bg-rose-600 text-white'
-                                        : iss.severity === 'High'
-                                        ? 'bg-orange-600 text-white'
-                                        : 'bg-amber-500 text-slate-950'
-                                    }`}
-                                  >
-                                    {iss.severity}
-                                  </span>
-                                  {iss.line && (
-                                    <span className="font-mono text-[10px] text-rose-700 dark:text-rose-300 font-semibold">
-                                      Line {iss.line}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="font-semibold text-rose-900 dark:text-rose-200">{iss.title}</p>
-                                {iss.description && (
-                                  <p className="mt-1 text-slate-700 dark:text-slate-300 leading-snug">{iss.description}</p>
-                                )}
-                                {iss.fix && (
-                                  <p className="mt-1.5 rounded bg-slate-50 dark:bg-slate-950/60 p-1.5 text-[11px] text-emerald-700 dark:text-emerald-300 font-mono border border-slate-200 dark:border-slate-800">
-                                    Fix: {iss.fix}
-                                  </p>
-                                )}
-                              </div>
-                            ))
-                          ) : (
-                            (analysis?.errors || analysis?.analysisErrors || []).map((errText, index) => (
-                              <div
-                                key={`err-${index}`}
-                                className="rounded-lg border border-rose-200 dark:border-rose-900/40 bg-white dark:bg-rose-950/40 p-2.5 text-xs text-rose-700 dark:text-rose-200 shadow-sm"
-                              >
-                                {errText}
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </aside>
-                    )}
+                {/* Pattern Blueprint */}
+                {patternGuide && !isSql && (
+                  <div className="rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 p-3.5 space-y-2">
+                    <span className="font-bold uppercase tracking-wider text-[10px] text-amber-700 dark:text-amber-400">
+                      Algorithmic Pattern: {snippet.topic}
+                    </span>
+                    <p className="text-slate-700 dark:text-slate-300 leading-snug">{patternGuide.invariant}</p>
+                    <p className="font-mono text-emerald-700 dark:text-emerald-400 text-[11px]">Benchmark: {patternGuide.timeSpace}</p>
                   </div>
                 )}
               </div>
             )}
 
-            {/* AI CODE REVIEW & ALGORITHMIC COACH SECTION */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 shadow-sm space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+            {/* TAB 2: PROGRESSIVE HINTS */}
+            {leftTab === 'hints' && (
+              <div className="space-y-4">
                 <div>
-                  <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                    {isSql ? 'SQL Execution & Performance Audit' : 'Algorithmic Complexity & Code Review'}
-                  </h2>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
-                    {isSql
-                      ? 'Execution pipeline, index suggestions, and query anti-patterns'
-                      : 'Big-O complexity, 3-tier progressive hints, and compiler diagnostics'}
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Progressive Hint Ladder</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Unlock hints one step at a time without spoiling the complete solution.
                   </p>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={handleAnalyze}
-                  disabled={analysisLoading || cooldownActive}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:opacity-50 shadow-sm"
-                >
-                  {analysisLoading
-                    ? 'Analyzing…'
-                    : cooldownActive
-                    ? `Wait (${cooldownLeft}s)`
-                    : analysis
-                    ? 'Re-analyze'
-                    : 'Explain & Audit Code'}
-                </button>
+                {analysis?.hints?.length ? (
+                  <div className="space-y-2.5">
+                    {analysis.hints.map((hint, i) => {
+                      const isRevealed = revealedHints.has(i);
+                      return (
+                        <div
+                          key={`hint-${i}`}
+                          className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-3.5 text-xs space-y-2"
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">
+                              Hint {i + 1} {i === 0 ? '(Intuition)' : i === 1 ? '(Data Structure)' : '(Algorithm & Edge Cases)'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => toggleHintReveal(i)}
+                              className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+                            >
+                              {isRevealed ? 'Hide Hint' : 'Reveal Hint'}
+                            </button>
+                          </div>
+                          {isRevealed && (
+                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed pt-2 border-t border-slate-200 dark:border-[#333333]">
+                              {hint}
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-8 text-center text-xs text-slate-500">
+                    <p>Click "Explain & Review" in the editor toolbar to generate tailored 3-tier hints for this problem.</p>
+                  </div>
+                )}
               </div>
+            )}
 
-              {/* Analysis Results Display */}
-              {analysis && (
-                <div className="space-y-4 pt-1">
-                  {/* Syntax & Issues Alert Card */}
-                  {analysis.hasSyntaxErrors || (analysis.issues?.length > 0) ? (
-                    <div className="rounded-lg border border-rose-200 dark:border-rose-500/50 bg-rose-50/70 dark:bg-rose-950/25 p-4 space-y-3 shadow-sm">
-                      <div>
-                        <h3 className="text-sm font-bold text-rose-800 dark:text-rose-300">
-                          {analysis.hasSyntaxErrors ? 'Syntax Errors Detected' : 'Code Issues Detected'}
-                        </h3>
-                        <p className="text-xs text-rose-700 dark:text-rose-200/80">
-                          {analysis.issues?.length || 1} issue(s) detected in {snippet.language}.
-                        </p>
+            {/* TAB 3: STUDENT TOOLKIT */}
+            {leftTab === 'toolkit' && !isSql && (
+              <div>
+                <DsaStudentToolkit />
+              </div>
+            )}
+
+            {/* TAB 4: EDITORIAL & AI REVIEW */}
+            {leftTab === 'editorial' && (
+              <div className="space-y-4 text-xs">
+                {analysis ? (
+                  <>
+                    {/* Score & Category Card */}
+                    <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-[#333333] pb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/15 border border-blue-500/30 text-lg font-bold text-blue-600 dark:text-blue-400">
+                            {analysis.overallScore}
+                            <span className="text-[10px] text-slate-400 font-normal">/10</span>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Solution Quality Score</h3>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{analysis.category}</p>
+                          </div>
+                        </div>
+
+                        {(analysis.timeComplexity || analysis.complexity?.timeComplexity) && (
+                          <div className="flex items-center gap-2 font-mono">
+                            <span className="rounded bg-white dark:bg-[#262626] px-2.5 py-1 text-blue-700 dark:text-blue-300 border border-slate-200 dark:border-[#3a3a3a]">
+                              Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity}
+                            </span>
+                            <span className="rounded bg-white dark:bg-[#262626] px-2.5 py-1 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-[#3a3a3a]">
+                              Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity}
+                            </span>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2 pt-1">
-                        {(analysis.issues || []).map((iss, i) => (
-                          <div
-                            key={`review-iss-${i}`}
-                            className="rounded-md border border-rose-200 dark:border-rose-900/60 bg-white dark:bg-rose-950/40 p-3 space-y-1.5 text-xs shadow-sm"
-                          >
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${
-                                    iss.severity === 'Critical'
-                                      ? 'bg-rose-600 text-white'
-                                      : iss.severity === 'High'
-                                      ? 'bg-orange-600 text-white'
-                                      : 'bg-amber-500 text-slate-950'
-                                  }`}
-                                >
-                                  {iss.severity}
-                                </span>
-                                <span className="font-semibold text-rose-900 dark:text-rose-200">{iss.title}</span>
+                      {/* Ratings Breakdown */}
+                      {analysis.ratings && (
+                        <div className="grid gap-2 sm:grid-cols-5 pt-1">
+                          {Object.entries(analysis.ratings).map(([k, v]) => (
+                            <div key={k} className="space-y-1">
+                              <div className="flex justify-between text-[10px] text-slate-500 capitalize">
+                                <span>{k}</span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">{v}/10</span>
                               </div>
-                              {iss.line && (
-                                <span className="rounded bg-rose-100 dark:bg-rose-500/20 px-2 py-0.5 font-mono text-[10px] font-bold text-rose-800 dark:text-rose-300">
-                                  Line {iss.line}
-                                </span>
-                              )}
+                              <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-[#333333] overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    v >= 8 ? 'bg-emerald-500' : v >= 6 ? 'bg-blue-500' : 'bg-amber-500'
+                                  }`}
+                                  style={{ width: `${Math.min(100, v * 10)}%` }}
+                                />
+                              </div>
                             </div>
-                            {iss.description && <p className="text-slate-700 dark:text-slate-300 leading-relaxed">{iss.description}</p>}
+                          ))}
+                        </div>
+                      )}
+
+                      {analysis.summary && <p className="text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-200 dark:border-[#333333] pt-2">{analysis.summary}</p>}
+                    </div>
+
+                    {/* Diagnostics & Issues */}
+                    {analysis.issues?.length > 0 ? (
+                      <div className="space-y-2">
+                        <h4 className="font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider text-[10px]">
+                          Detected Issues ({analysis.issues.length})
+                        </h4>
+                        {analysis.issues.map((iss, i) => (
+                          <div
+                            key={`iss-${i}`}
+                            className="rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/30 p-3 space-y-1"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-rose-800 dark:text-rose-200">{iss.title}</span>
+                              {iss.line && <span className="font-mono text-[10px] text-rose-600">Line {iss.line}</span>}
+                            </div>
+                            <p className="text-slate-600 dark:text-slate-400 leading-snug">{iss.description}</p>
                             {iss.fix && (
-                              <p className="rounded bg-slate-50 dark:bg-slate-950/80 p-2 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-slate-800">
+                              <p className="rounded bg-white dark:bg-[#1a1a1a] p-1.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-[#333333]">
                                 Fix: {iss.fix}
                               </p>
                             )}
                           </div>
                         ))}
                       </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-lg border border-emerald-300 dark:border-emerald-500/30 bg-emerald-50 dark:bg-emerald-950/20 p-3 text-xs text-emerald-800 dark:text-emerald-300 shadow-sm">
-                      <strong>Syntax Valid:</strong> Clean code with no compilation or parse errors.
-                    </div>
-                  )}
+                    ) : null}
 
-                  {/* Score & Complexity Card */}
-                  <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-600/20 border border-blue-200 dark:border-blue-500/30 text-base font-bold text-blue-700 dark:text-blue-400">
-                          {analysis.overallScore}
-                          <span className="text-[10px] font-normal text-slate-500 dark:text-slate-400">/10</span>
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-slate-900 dark:text-white">Algorithmic Quality</h3>
-                          <p className="text-xs text-slate-600 dark:text-slate-400">
-                            {analysis.category} {analysis.subCategory ? `· ${analysis.subCategory}` : ''}
-                          </p>
-                        </div>
-                      </div>
-
-                      {(analysis.timeComplexity || analysis.complexity?.timeComplexity) && (
-                        <div className="flex items-center gap-2 font-mono text-xs">
-                          <span className="rounded bg-white dark:bg-slate-800 px-2.5 py-1 text-blue-700 dark:text-blue-300 border border-slate-200 dark:border-slate-700 shadow-sm">
-                            Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity}
-                          </span>
-                          <span className="rounded bg-white dark:bg-slate-800 px-2.5 py-1 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-slate-700 shadow-sm">
-                            Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Progress Bars */}
-                    {analysis.ratings && (
-                      <div className="grid gap-2 sm:grid-cols-5">
-                        {Object.entries(analysis.ratings).map(([key, val]) => (
-                          <div key={key} className="space-y-1">
-                            <div className="flex justify-between text-[10px] text-slate-600 dark:text-slate-400 capitalize">
-                              <span>{key}</span>
-                              <span className="font-semibold text-slate-800 dark:text-slate-300">{val}/10</span>
-                            </div>
-                            <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  val >= 8 ? 'bg-emerald-500' : val >= 6 ? 'bg-blue-500' : 'bg-amber-500'
-                                }`}
-                                style={{ width: `${Math.min(100, val * 10)}%` }}
-                              />
-                            </div>
+                    {/* Non-Spoiler Solution Code */}
+                    {(analysis.optimizedCode || analysis.correctedCode) && (
+                      <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-bold text-slate-800 dark:text-slate-200">Solution Reference</h4>
+                            <p className="text-[11px] text-slate-500">Hidden by default so you can practice independently.</p>
                           </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {analysis.summary && <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-200 dark:border-slate-800 pt-2.5">{analysis.summary}</p>}
-                  </div>
-
-                  {/* SQL Execution Order Pipeline (if SQL) */}
-                  {isSql && analysis.sqlAnalysis?.clauseOrder?.length > 0 && (
-                    <div className="rounded-lg border border-emerald-200 dark:border-emerald-900/40 bg-emerald-50 dark:bg-emerald-950/15 p-4 space-y-3">
-                      <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400">
-                        Logical SQL Execution Pipeline
-                      </h3>
-                      <div className="grid gap-2 sm:grid-cols-3">
-                        {analysis.sqlAnalysis.clauseOrder.map((step, idx) => (
-                          <div
-                            key={`step-${idx}`}
-                            className="rounded-md border border-emerald-200 dark:border-emerald-900/50 bg-white dark:bg-slate-950 p-2.5 text-xs space-y-1 shadow-sm"
+                          <button
+                            type="button"
+                            onClick={() => setShowSolutionCode((prev) => !prev)}
+                            className={`rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
+                              showSolutionCode
+                                ? 'bg-slate-200 dark:bg-[#333333] text-slate-800 dark:text-slate-200'
+                                : 'bg-emerald-600 text-white hover:bg-emerald-500'
+                            }`}
                           >
-                            <div className="flex items-center justify-between">
-                              <span className="rounded bg-emerald-100 dark:bg-emerald-600/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-emerald-800 dark:text-emerald-400">
-                                Step {step.order || idx + 1}
-                              </span>
-                              <span className="font-bold text-slate-900 dark:text-white">{step.clause}</span>
-                            </div>
-                            <p className="text-[11px] text-slate-600 dark:text-slate-400">{step.description}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 3-Tier Progressive Hints with Independent Reveal Buttons */}
-                  {analysis.hints?.length > 0 && (
-                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400">
-                          Progressive Hint Ladder (Practice Mode)
-                        </h3>
-                        <span className="text-[11px] text-slate-500">
-                          {revealedHints.size} of {analysis.hints.length} revealed
-                        </span>
-                      </div>
-
-                      <div className="space-y-2">
-                        {analysis.hints.map((hint, i) => {
-                          const isRevealed = revealedHints.has(i);
-                          return (
-                            <div
-                              key={`hint-${i}`}
-                              className="rounded-md border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 p-3 text-xs space-y-1.5 shadow-sm"
-                            >
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-slate-800 dark:text-slate-300">
-                                  Hint {i + 1} {i === 0 ? '(Intuition)' : i === 1 ? '(Data Structure)' : '(Algorithm & Edge Cases)'}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => toggleHintReveal(i)}
-                                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium"
-                                >
-                                  {isRevealed ? 'Hide Hint' : 'Reveal Hint'}
-                                </button>
-                              </div>
-                              {isRevealed && (
-                                <p className="text-slate-800 dark:text-slate-200 leading-relaxed pt-1 border-t border-slate-100 dark:border-slate-800">
-                                  {hint}
-                                </p>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SOLUTION CODE: HIDDEN BY DEFAULT (Reveal on Demand) */}
-                  {(analysis.correctedCode || analysis.optimizedCode) && (
-                    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-4 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
-                            Solution & Fix Reference
-                          </h3>
-                          <p className="text-[11px] text-slate-500">
-                            Hidden by default so you can attempt the solution first.
-                          </p>
+                            {showSolutionCode ? 'Hide Solution' : 'Reveal Solution'}
+                          </button>
                         </div>
 
-                        <button
-                          type="button"
-                          onClick={() => setShowSolutionCode((prev) => !prev)}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors border ${
-                            showSolutionCode
-                              ? 'bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 border-slate-300 dark:border-slate-700'
-                              : 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500 shadow-sm'
-                          }`}
-                        >
-                          {showSolutionCode ? 'Hide Solution Code' : 'Reveal Solution Code'}
-                        </button>
-                      </div>
-
-                      {showSolutionCode && (
-                        <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden mt-3 shadow-sm">
-                          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-3 py-2 bg-slate-50 dark:bg-slate-950">
-                            <div className="flex gap-2">
-                              {analysis.optimizedCode && (
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveCodeTab('optimized')}
-                                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                                    activeCodeTab === 'optimized'
-                                      ? 'bg-emerald-600 text-white shadow-sm'
-                                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                  }`}
-                                >
-                                  Optimal Solution
-                                </button>
-                              )}
-                              {analysis.correctedCode && (
-                                <button
-                                  type="button"
-                                  onClick={() => setActiveCodeTab('corrected')}
-                                  className={`rounded px-3 py-1 text-xs font-semibold transition-colors ${
-                                    activeCodeTab === 'corrected'
-                                      ? 'bg-blue-600 text-white shadow-sm'
-                                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                                  }`}
-                                >
-                                  Corrected Code
-                                </button>
-                              )}
+                        {showSolutionCode && (
+                          <div className="mt-2 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <div className="flex gap-2">
+                                {analysis.optimizedCode && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveCodeTab('optimized')}
+                                    className={`px-2.5 py-1 rounded text-[11px] font-semibold ${
+                                      activeCodeTab === 'optimized' ? 'bg-emerald-600 text-white' : 'text-slate-500'
+                                    }`}
+                                  >
+                                    Optimal
+                                  </button>
+                                )}
+                                {analysis.correctedCode && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveCodeTab('corrected')}
+                                    className={`px-2.5 py-1 rounded text-[11px] font-semibold ${
+                                      activeCodeTab === 'corrected' ? 'bg-blue-600 text-white' : 'text-slate-500'
+                                    }`}
+                                  >
+                                    Corrected
+                                  </button>
+                                )}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCode(activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode)}
+                                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
+                              >
+                                {copiedCode ? 'Copied' : 'Copy Code'}
+                              </button>
                             </div>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                handleCopyCode(
-                                  activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode
-                                )
-                              }
-                              className="rounded bg-slate-200 dark:bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700"
-                            >
-                              {copiedCode ? 'Copied' : 'Copy Solution'}
-                            </button>
+                            <pre className="overflow-x-auto rounded bg-white dark:bg-[#161616] p-3 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-[#333333]">
+                              <code>{activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode}</code>
+                            </pre>
                           </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-8 text-center text-xs text-slate-500">
+                    <p>Click "Explain & Review" in the editor to run Big-O complexity audits and view editorial solutions.</p>
+                  </div>
+                )}
+              </div>
+            )}
 
-                          <div className="p-2">
-                            <CodeEditor
-                              value={activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode}
-                              language={snippet.language}
-                              height="280px"
-                              readOnly
-                            />
-                          </div>
+            {/* TAB 5: SUBMISSIONS & VERSIONS */}
+            {leftTab === 'versions' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Version History & Submissions</h3>
+                  <span className="text-xs text-slate-500">{versions.length} total versions</span>
+                </div>
+
+                <VersionHistory
+                  versions={versions}
+                  currentVersion={snippet.currentVersion}
+                  selectedVersion={selectedVersion}
+                  onSelect={(ver) => setSelectedVersion(ver)}
+                />
+              </div>
+            )}
+
+            {/* TAB 6: SOLUTIONS & DISCUSSION */}
+            {leftTab === 'solutions' && (
+              <div className="space-y-4 text-xs">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Community Discussion & Approaches</h3>
+
+                {user ? (
+                  <form onSubmit={handleAddComment} className="space-y-2">
+                    <textarea
+                      value={commentInput}
+                      onChange={(e) => setCommentInput(e.target.value)}
+                      rows={2}
+                      placeholder="Share an optimization tip, edge case, or approach…"
+                      className="w-full rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-2.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:outline-none"
+                    />
+                    <div className="flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={commentSubmitting || !commentInput.trim()}
+                        className="rounded-md bg-blue-600 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                      >
+                        {commentSubmitting ? 'Posting…' : 'Post Comment'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <p className="text-slate-500">Sign in to join the discussion.</p>
+                )}
+
+                <div className="space-y-3 divide-y divide-slate-100 dark:divide-[#333333] pt-2">
+                  {comments.map((c) => (
+                    <div key={c._id} className="pt-3 first:pt-0 space-y-1">
+                      <div className="flex items-center justify-between text-slate-500">
+                        <div className="flex items-center gap-2">
+                          {c.author?.avatar && (
+                            <img src={c.author.avatar} alt={c.author.name} className="h-5 w-5 rounded-full object-cover" />
+                          )}
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">{c.author?.name || 'User'}</span>
+                        </div>
+                        <span className="text-[10px]">{new Date(c.createdAt).toLocaleDateString()}</span>
+                      </div>
+                      <p className="text-slate-700 dark:text-slate-300 leading-relaxed pl-7">{c.content}</p>
+                      {user && user.id === c.author?._id && (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteComment(c._id)}
+                            className="text-[10px] text-rose-500 hover:underline"
+                          >
+                            Delete
+                          </button>
                         </div>
                       )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              )}
-            </div>
-
-            {/* COMMENTS SECTION */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5 space-y-4 shadow-sm">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Discussion & Alternative Approaches ({comments.length})</h2>
-
-              {user ? (
-                <form onSubmit={handleAddComment} className="space-y-2">
-                  <textarea
-                    value={commentInput}
-                    onChange={(e) => setCommentInput(e.target.value)}
-                    rows={2}
-                    placeholder="Share an edge case, alternative approach, or optimization tip…"
-                    className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-2.5 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
-                  />
-                  <div className="flex justify-end">
-                    <button
-                      type="submit"
-                      disabled={commentSubmitting || !commentInput.trim()}
-                      className="rounded-md bg-blue-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-blue-500 disabled:opacity-50 shadow-sm"
-                    >
-                      {commentSubmitting ? 'Posting…' : 'Post Comment'}
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <p className="text-xs text-slate-500 dark:text-slate-400">Sign in to join the discussion.</p>
-              )}
-
-              <div className="space-y-3 divide-y divide-slate-100 dark:divide-slate-800/80 pt-2">
-                {comments.map((c) => (
-                  <div key={c._id} className="pt-3 first:pt-0 space-y-1 text-xs">
-                    <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
-                      <div className="flex items-center gap-2">
-                        {c.author?.avatar && (
-                          <img src={c.author.avatar} alt={c.author.name} className="h-5 w-5 rounded-full object-cover border border-slate-200 dark:border-slate-700" />
-                        )}
-                        <span className="font-semibold text-slate-900 dark:text-slate-200">{c.author?.name || 'User'}</span>
-                      </div>
-                      <span className="text-[10px]">{new Date(c.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <p className="text-slate-700 dark:text-slate-300 leading-relaxed pl-7">{c.content}</p>
-                    {user && user.id === c.author?._id && (
-                      <div className="flex justify-end">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteComment(c._id)}
-                          className="text-[10px] text-rose-600 dark:text-rose-400 hover:underline"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                ))}
               </div>
-            </div>
+            )}
           </div>
+        </section>
 
-          {/* RIGHT SIDEBAR: Version History Drawer & Metadata */}
-          <div className="space-y-6">
-            {/* Version History Drawer */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3 shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
-                Version History ({versions.length})
-              </h3>
+        {/* RIGHT COLUMN: Code Editor, Language Selector & Action Toolbar */}
+        <section className="flex flex-col rounded-xl border border-slate-200 dark:border-[#2e2e2e] bg-white dark:bg-[#262626] shadow-sm overflow-hidden min-h-[580px]">
+          {/* Editor Header Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#202020] px-3 py-2">
+            {/* Primary Language */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                {isSql ? 'SQL Dialect:' : 'Language:'}
+              </span>
+              <span className="rounded bg-slate-200 dark:bg-[#333333] px-2.5 py-0.5 font-mono text-xs font-bold text-slate-800 dark:text-slate-200 uppercase">
+                {snippet.language}
+              </span>
+            </div>
 
-              <VersionHistory
-                versions={versions}
-                currentVersion={snippet.currentVersion}
-                selectedVersion={selectedVersion}
-                onSelectVersion={setSelectedVersion}
-                snippetId={id}
-                isOwner={isOwner}
-                onVersionRestored={() => {
-                  loadSnippet();
-                  loadVersions();
+            {/* Quick Actions (Boilerplate, Polyglot Rosetta, Copy) */}
+            <div className="flex items-center gap-2 text-xs">
+              {!isSql && (
+                <button
+                  type="button"
+                  onClick={() => setShowPolyglot((prev) => !prev)}
+                  className={`rounded px-2.5 py-1 text-[11px] font-semibold border transition-colors ${
+                    showPolyglot
+                      ? 'bg-indigo-600 text-white border-indigo-500'
+                      : 'bg-white dark:bg-[#262626] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#3a3a3a] hover:bg-slate-100 dark:hover:bg-[#333333]'
+                  }`}
+                >
+                  Polyglot Rosetta (4-Lang)
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  const boilerplate = isSql ? STARTER_BOILERPLATES.sql : STARTER_BOILERPLATES[snippet.language] || STARTER_BOILERPLATES.python;
+                  setCurrentCode(boilerplate);
                 }}
-              />
-            </div>
+                className="text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                title="Reset Starter Template"
+              >
+                Template
+              </button>
 
-            {/* Author & Problem Details Card */}
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 space-y-3 text-xs shadow-sm">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-400">Problem Info</h3>
-              <div className="flex items-center gap-3">
-                {snippet.owner?.avatar && (
-                  <img
-                    src={snippet.owner.avatar}
-                    alt={snippet.owner.name}
-                    className="h-9 w-9 rounded-full object-cover border border-slate-200 dark:border-slate-700"
-                  />
-                )}
-                <div>
-                  <p className="font-semibold text-slate-900 dark:text-white">{snippet.owner?.name || 'Developer'}</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Created {new Date(snippet.createdAt).toLocaleDateString()}</p>
-                </div>
-              </div>
-
-              <div className="space-y-1.5 border-t border-slate-100 dark:border-slate-800 pt-3 text-[11px] text-slate-600 dark:text-slate-400">
-                <div className="flex justify-between">
-                  <span>Domain:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-200">{isSql ? 'SQL' : 'DSA'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Difficulty:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-200">{snippet.difficulty || 'Medium'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Pattern / Topic:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-200">{snippet.topic || 'General'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Visibility:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-200">{snippet.isPublic ? 'Public' : 'Private'}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Total Versions:</span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-200">{snippet.currentVersion}</span>
-                </div>
-              </div>
+              <button
+                type="button"
+                onClick={() => handleCopyCode(currentCode)}
+                className="text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                title="Copy Editor Code"
+              >
+                {copiedCode ? 'Copied!' : 'Copy'}
+              </button>
             </div>
           </div>
-        </div>
+
+          {/* Polyglot Translation Drawer (when enabled) */}
+          <AnimatePresence>
+            {showPolyglot && !isSql && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="border-b border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-[#181a24] p-3 space-y-2"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex gap-1.5">
+                    {DSA_LANGUAGES.map((l) => (
+                      <button
+                        key={l.id}
+                        type="button"
+                        onClick={() => setActivePolyglotLang(l.id)}
+                        className={`rounded px-2.5 py-0.5 text-[11px] font-semibold border ${
+                          activePolyglotLang === l.id
+                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
+                            : 'bg-white dark:bg-[#262626] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#3a3a3a]'
+                        }`}
+                      >
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTranslatePolyglot(activePolyglotLang)}
+                    disabled={translatingPolyglot}
+                    className="rounded bg-indigo-600 px-2.5 py-0.5 text-[11px] font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+                  >
+                    {translatingPolyglot ? 'Translating…' : `Translate to ${activePolyglotLang}`}
+                  </button>
+                </div>
+
+                <div className="rounded border border-indigo-200 dark:border-indigo-900/40 overflow-hidden">
+                  <CodeEditor
+                    value={
+                      activePolyglotLang === snippet.language
+                        ? currentCode
+                        : polyglotTranslations[activePolyglotLang] || `// Click "Translate to ${activePolyglotLang}" above`
+                    }
+                    language={activePolyglotLang}
+                    height="200px"
+                    readOnly
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Main Code Editor */}
+          <div className="flex-1 min-h-[460px] bg-white dark:bg-[#1e1e1e]">
+            {versionLoading || !codeLoaded ? (
+              <CodeEditorSkeleton />
+            ) : (
+              <CodeEditor
+                value={currentCode}
+                onChange={setCurrentCode}
+                language={snippet.language}
+                height="500px"
+                errorLines={errorLines}
+              />
+            )}
+          </div>
+
+          {/* LeetCode Bottom Console / Action Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#202020] px-4 py-2.5">
+            {/* Left: Active Version State */}
+            <div className="flex items-center gap-2 text-xs text-slate-500 font-mono">
+              <span>Selected: v{selectedVersion || snippet.currentVersion}</span>
+              {currentCode !== versions.find((v) => v.versionNumber === selectedVersion)?.fullCode && (
+                <span className="text-amber-500 font-sans font-semibold">● Unsaved edits</span>
+              )}
+            </div>
+
+            {/* Right: Explain & Review + Save Version */}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleAnalyze}
+                disabled={analysisLoading || cooldownActive}
+                className="rounded-lg border border-blue-500 bg-blue-50 dark:bg-blue-600/15 px-3.5 py-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-600/25 disabled:opacity-50 transition-colors shadow-sm"
+              >
+                {analysisLoading
+                  ? 'Analyzing…'
+                  : cooldownActive
+                  ? `Wait (${cooldownLeft}s)`
+                  : 'Explain & Review'}
+              </button>
+
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setShowSaveModal(true)}
+                  className="rounded-lg bg-emerald-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500 transition-colors shadow-sm"
+                >
+                  Save Version {snippet.currentVersion + 1}
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
       </main>
+
+      {/* SAVE VERSION MODAL (With double-click prevention) */}
+      <AnimatePresence>
+        {showSaveModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md rounded-xl border border-slate-200 dark:border-[#333333] bg-white dark:bg-[#262626] p-5 shadow-2xl space-y-4 text-xs text-slate-800 dark:text-slate-200"
+            >
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Save Version {snippet.currentVersion + 1}
+                </h3>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  Record an incremental solution iteration with a commit note.
+                </p>
+              </div>
+
+              <form onSubmit={handleSaveVersion} className="space-y-3">
+                <div>
+                  <label className="mb-1 block font-semibold uppercase tracking-wider text-[10px] text-slate-500">
+                    Version Note / Commit Message <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={saveCommitMessage}
+                    onChange={(e) => setSaveCommitMessage(e.target.value)}
+                    placeholder={`e.g. Optimize inner loop from O(N^2) to O(N)`}
+                    className="w-full rounded-lg border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-2 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:border-blue-500 focus:outline-none"
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSaveModal(false)}
+                    disabled={savingVersion}
+                    className="rounded-lg border border-slate-200 dark:border-[#404040] px-3.5 py-1.5 font-medium hover:bg-slate-100 dark:hover:bg-[#333333]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingVersion || !saveCommitMessage.trim()}
+                    className="rounded-lg bg-emerald-600 px-4 py-1.5 font-semibold text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+                  >
+                    {savingVersion ? (
+                      <>
+                        <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                        <span>Saving…</span>
+                      </>
+                    ) : (
+                      <span>Save Version {snippet.currentVersion + 1}</span>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* EDIT DETAILS MODAL */}
+      <AnimatePresence>
+        {showEditDetailsModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-xl border border-slate-200 dark:border-[#333333] bg-white dark:bg-[#262626] p-5 shadow-2xl space-y-4 text-xs text-slate-800 dark:text-slate-200"
+            >
+              <div>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Edit Problem Parameters</h3>
+                <p className="text-[11px] text-slate-500">Update problem statement, difficulty, and complexity targets.</p>
+              </div>
+
+              <form onSubmit={handleSaveProblemDetails} className="space-y-3">
+                <div>
+                  <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Title</label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+
+                <div className="grid gap-3 grid-cols-2">
+                  <div>
+                    <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Difficulty</label>
+                    <select
+                      value={editDifficulty}
+                      onChange={(e) => setEditDifficulty(e.target.value)}
+                      className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
+                    >
+                      {DIFFICULTIES.map((d) => (
+                        <option key={d} value={d}>
+                          {d}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Topic / Pattern</label>
+                    <select
+                      value={editTopic}
+                      onChange={(e) => setEditTopic(e.target.value)}
+                      className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
+                    >
+                      {(isSql ? SQL_TOPICS : DSA_TOPICS).map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {!isSql && (
+                  <div className="grid gap-3 grid-cols-2">
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Target Time</label>
+                      <input
+                        type="text"
+                        value={editTargetTime}
+                        onChange={(e) => setEditTargetTime(e.target.value)}
+                        placeholder="e.g. O(N)"
+                        className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Target Space</label>
+                      <input
+                        type="text"
+                        value={editTargetSpace}
+                        onChange={(e) => setEditTargetSpace(e.target.value)}
+                        placeholder="e.g. O(1)"
+                        className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Problem Description</label>
+                  <textarea
+                    rows={4}
+                    value={editProblemStatement}
+                    onChange={(e) => setEditProblemStatement(e.target.value)}
+                    className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] p-2.5 text-xs text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowEditDetailsModal(false)}
+                    className="rounded border border-slate-200 dark:border-[#404040] px-3 py-1.5 font-medium hover:bg-slate-100 dark:hover:bg-[#333333]"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingDetails}
+                    className="rounded bg-blue-600 px-4 py-1.5 font-semibold text-white hover:bg-blue-500 disabled:opacity-50"
+                  >
+                    {savingDetails ? 'Saving…' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
