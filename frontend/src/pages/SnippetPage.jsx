@@ -11,7 +11,6 @@ import api from '../services/api.js';
 import { useAuth } from '../store/AuthContext.jsx';
 import { useTheme } from '../store/ThemeContext.jsx';
 import {
-  DSA_LANGUAGES,
   SQL_LANGUAGES,
   DSA_TOPICS,
   SQL_TOPICS,
@@ -105,12 +104,6 @@ export default function SnippetPage() {
   const [cooldownLeft, setCooldownLeft] = useState(0);
   const cooldownActive = cooldownLeft > 0;
 
-  // Polyglot Rosetta State (for DSA)
-  const [showPolyglot, setShowPolyglot] = useState(false);
-  const [activePolyglotLang, setActivePolyglotLang] = useState('python');
-  const [polyglotTranslations, setPolyglotTranslations] = useState({});
-  const [translatingPolyglot, setTranslatingPolyglot] = useState(false);
-
   // Progressive Hint Ladder Unlocking
   const [revealedHints, setRevealedHints] = useState(new Set());
 
@@ -185,9 +178,6 @@ export default function SnippetPage() {
       setEditTargetTime(res.data.snippet.targetTimeComplexity || '');
       setEditTargetSpace(res.data.snippet.targetSpaceComplexity || '');
       setEditSqlSchema(res.data.snippet.sqlSchema || DEFAULT_MOCK_SQL_SCHEMA);
-      if (res.data.snippet.polyglotSolutions) {
-        setPolyglotTranslations(res.data.snippet.polyglotSolutions);
-      }
     } catch (_err) {
       setError('Problem not found or failed to load.');
     } finally {
@@ -383,8 +373,8 @@ export default function SnippetPage() {
         language: snippet?.language || 'python',
         snippetId: id,
         versionNumber: selectedVersion || snippet?.currentVersion || 1,
-        domain: snippet?.domain || (snippet?.language === 'sql' ? 'sql' : 'dsa'),
-        problemStatement: snippet?.problemStatement || '',
+        topic: snippet?.topic || 'General',
+        problemStatement: snippet?.problemStatement || snippet?.description || '',
         targetTimeComplexity: snippet?.targetTimeComplexity || '',
         targetSpaceComplexity: snippet?.targetSpaceComplexity || '',
         sqlSchema: snippet?.sqlSchema || '',
@@ -392,19 +382,16 @@ export default function SnippetPage() {
         forceRefresh: true,
       });
       setAnalysis(res.data);
-      if (res.data.polyglotTranslations) {
-        setPolyglotTranslations((prev) => ({ ...prev, ...res.data.polyglotTranslations }));
-      }
       setRevealedHints(new Set());
       setShowSolutionCode(false);
-      setLeftTab('editorial'); // Switch to Editorial / Review tab automatically!
+      setLeftTab('editorial'); // Switch to Review tab automatically!
     } catch (err) {
       const status = err.response?.status;
-      const message = err.response?.data?.message || 'AI analysis failed. Please try again.';
+      const message = err.response?.data?.message || 'AI review failed. Please try again.';
       if (status === 429) {
-        const match = message.match(/(\d+)\s*seconds/);
-        setCooldownLeft(match ? Number(match[1]) : 6);
-        setError('Please wait a few seconds before requesting AI analysis again.');
+        const match = message.match(/(\d+)\s*s/);
+        setCooldownLeft(match ? Number(match[1]) : 4);
+        setError('Please wait a few seconds before requesting AI review again.');
       } else {
         setError(message);
       }
@@ -412,28 +399,6 @@ export default function SnippetPage() {
       setAnalysisLoading(false);
     }
   }, [canAnalyze, currentCode, snippet, id, selectedVersion, cooldownActive, analysisLoading]);
-
-  // Handle Polyglot Translation
-  const handleTranslatePolyglot = async (targetLang) => {
-    if (!currentCode.trim() || translatingPolyglot) return;
-    try {
-      setTranslatingPolyglot(true);
-      const res = await api.post('/analysis/translate', {
-        code: currentCode,
-        fromLanguage: snippet?.language || 'python',
-        toLanguage: targetLang,
-        domain: snippet?.domain || 'dsa',
-        snippetId: id,
-      });
-      if (res.data.translatedCode) {
-        setPolyglotTranslations((prev) => ({ ...prev, [targetLang]: res.data.translatedCode }));
-      }
-    } catch (_err) {
-      setError(`Failed to translate into ${targetLang}.`);
-    } finally {
-      setTranslatingPolyglot(false);
-    }
-  };
 
   const handleToggleLike = async () => {
     if (!user) {
@@ -985,150 +950,93 @@ export default function SnippetPage() {
                       </div>
                     )}
 
-                    {/* Score & Category Card */}
+                    {/* Current Version Complexity Card */}
                     <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-3">
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-[#333333] pb-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-blue-500/15 border border-blue-500/30 text-lg font-bold text-blue-600 dark:text-blue-400">
-                            {analysis.overallScore}
-                            <span className="text-[10px] text-slate-400 font-normal">/10</span>
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Solution Quality Score</h3>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">{analysis.category}</p>
-                          </div>
+                      <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
+                        Current Version Complexity
+                      </h4>
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="rounded border border-slate-200 dark:border-[#3a3a3a] bg-white dark:bg-[#262626] p-3 space-y-1">
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase">Time Complexity</span>
+                          <p className="font-mono text-sm font-bold text-blue-600 dark:text-blue-400">
+                            {analysis.timeComplexity || 'O(n)'}
+                          </p>
+                          <p className="text-[10px] text-slate-400">Target: {snippet.targetTimeComplexity || 'Optimal'}</p>
                         </div>
+                        <div className="rounded border border-slate-200 dark:border-[#3a3a3a] bg-white dark:bg-[#262626] p-3 space-y-1">
+                          <span className="text-[10px] font-semibold text-slate-500 uppercase">Space Complexity</span>
+                          <p className="font-mono text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                            {analysis.spaceComplexity || 'O(1)'}
+                          </p>
+                          <p className="text-[10px] text-slate-400">Target: {snippet.targetSpaceComplexity || 'Optimal'}</p>
+                        </div>
+                      </div>
+                    </div>
 
-                        {(analysis.timeComplexity || analysis.complexity?.timeComplexity) && (
-                          <div className="flex items-center gap-2 font-mono">
-                            <span className="rounded bg-white dark:bg-[#262626] px-2.5 py-1 text-blue-700 dark:text-blue-300 border border-slate-200 dark:border-[#3a3a3a]">
-                              Time: {analysis.timeComplexity || analysis.complexity?.timeComplexity}
-                            </span>
-                            <span className="rounded bg-white dark:bg-[#262626] px-2.5 py-1 text-indigo-700 dark:text-indigo-300 border border-slate-200 dark:border-[#3a3a3a]">
-                              Space: {analysis.spaceComplexity || analysis.complexity?.spaceComplexity}
-                            </span>
-                          </div>
+                    {/* Syntax & Compilation Status */}
+                    <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
+                          Syntax & Compilation Check
+                        </h4>
+                        {analysis.hasSyntaxErrors ? (
+                          <span className="rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold">
+                            Errors Detected ({analysis.issues?.length || 1})
+                          </span>
+                        ) : (
+                          <span className="rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold">
+                            ✓ Clean (No Syntax Errors)
+                          </span>
                         )}
                       </div>
 
-                      {/* Ratings Breakdown */}
-                      {analysis.ratings && (
-                        <div className="grid gap-2 sm:grid-cols-5 pt-1">
-                          {Object.entries(analysis.ratings).map(([k, v]) => (
-                            <div key={k} className="space-y-1">
-                              <div className="flex justify-between text-[10px] text-slate-500 capitalize">
-                                <span>{k}</span>
-                                <span className="font-semibold text-slate-800 dark:text-slate-200">{v}/10</span>
+                      {analysis.issues?.length > 0 && (
+                        <div className="space-y-2 pt-2">
+                          {analysis.issues.map((iss, i) => (
+                            <div
+                              key={`iss-${i}`}
+                              className="rounded border border-rose-200 dark:border-rose-900/60 bg-rose-50/60 dark:bg-rose-950/30 p-3 space-y-1"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-rose-800 dark:text-rose-200">{iss.title}</span>
+                                {iss.line && <span className="font-mono text-[10px] text-rose-600">Line {iss.line}</span>}
                               </div>
-                              <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-[#333333] overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    v >= 8 ? 'bg-emerald-500' : v >= 6 ? 'bg-blue-500' : 'bg-amber-500'
-                                  }`}
-                                  style={{ width: `${Math.min(100, v * 10)}%` }}
-                                />
-                              </div>
+                              {iss.description && <p className="text-slate-600 dark:text-slate-400 leading-snug">{iss.description}</p>}
+                              {iss.fix && (
+                                <p className="rounded bg-white dark:bg-[#1a1a1a] p-1.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-[#333333]">
+                                  Fix: {iss.fix}
+                                </p>
+                              )}
                             </div>
                           ))}
                         </div>
                       )}
-
-                      {analysis.summary && <p className="text-slate-700 dark:text-slate-300 leading-relaxed border-t border-slate-200 dark:border-[#333333] pt-2">{analysis.summary}</p>}
                     </div>
 
-                    {/* Diagnostics & Issues */}
-                    {analysis.issues?.length > 0 ? (
-                      <div className="space-y-2">
-                        <h4 className="font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider text-[10px]">
-                          Detected Issues ({analysis.issues.length})
+                    {/* Approach Analysis (Current vs Recommended) */}
+                    <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-3">
+                      <div>
+                        <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
+                          Approach You Followed
                         </h4>
-                        {analysis.issues.map((iss, i) => (
-                          <div
-                            key={`iss-${i}`}
-                            className="rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/30 p-3 space-y-1"
-                          >
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-rose-800 dark:text-rose-200">{iss.title}</span>
-                              {iss.line && <span className="font-mono text-[10px] text-rose-600">Line {iss.line}</span>}
-                            </div>
-                            <p className="text-slate-600 dark:text-slate-400 leading-snug">{iss.description}</p>
-                            {iss.fix && (
-                              <p className="rounded bg-white dark:bg-[#1a1a1a] p-1.5 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-[#333333]">
-                                Fix: {iss.fix}
-                              </p>
-                            )}
-                          </div>
-                        ))}
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed mt-1">
+                          {analysis.currentApproach || 'Evaluated your current algorithm implementation and state transitions.'}
+                        </p>
                       </div>
-                    ) : null}
 
-                    {/* Non-Spoiler Solution Code */}
-                    {(analysis.optimizedCode || analysis.correctedCode) && (
-                      <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-4 space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h4 className="font-bold text-slate-800 dark:text-slate-200">Solution Reference</h4>
-                            <p className="text-[11px] text-slate-500">Hidden by default so you can practice independently.</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setShowSolutionCode((prev) => !prev)}
-                            className={`rounded px-3 py-1.5 text-xs font-semibold transition-colors ${
-                              showSolutionCode
-                                ? 'bg-slate-200 dark:bg-[#333333] text-slate-800 dark:text-slate-200'
-                                : 'bg-emerald-600 text-white hover:bg-emerald-500'
-                            }`}
-                          >
-                            {showSolutionCode ? 'Hide Solution' : 'Reveal Solution'}
-                          </button>
-                        </div>
-
-                        {showSolutionCode && (
-                          <div className="mt-2 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <div className="flex gap-2">
-                                {analysis.optimizedCode && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setActiveCodeTab('optimized')}
-                                    className={`px-2.5 py-1 rounded text-[11px] font-semibold ${
-                                      activeCodeTab === 'optimized' ? 'bg-emerald-600 text-white' : 'text-slate-500'
-                                    }`}
-                                  >
-                                    Optimal
-                                  </button>
-                                )}
-                                {analysis.correctedCode && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setActiveCodeTab('corrected')}
-                                    className={`px-2.5 py-1 rounded text-[11px] font-semibold ${
-                                      activeCodeTab === 'corrected' ? 'bg-blue-600 text-white' : 'text-slate-500'
-                                    }`}
-                                  >
-                                    Corrected
-                                  </button>
-                                )}
-                              </div>
-                              <button
-                                type="button"
-                                onClick={() => handleCopyCode(activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode)}
-                                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline"
-                              >
-                                {copiedCode ? 'Copied' : 'Copy Code'}
-                              </button>
-                            </div>
-                            <pre className="overflow-x-auto rounded bg-white dark:bg-[#161616] p-3 font-mono text-[11px] text-emerald-700 dark:text-emerald-300 border border-slate-200 dark:border-[#333333]">
-                              <code>{activeCodeTab === 'optimized' ? analysis.optimizedCode : analysis.correctedCode}</code>
-                            </pre>
-                          </div>
-                        )}
+                      <div className="border-t border-slate-200 dark:border-[#333333] pt-3">
+                        <h4 className="font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider text-[11px]">
+                          Approach You Should Follow (To Reach Target Complexity)
+                        </h4>
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed mt-1">
+                          {analysis.recommendedApproach || `Apply optimal ${snippet.topic} pattern to achieve ${snippet.targetTimeComplexity || 'optimal'} time and ${snippet.targetSpaceComplexity || 'optimal'} space.`}
+                        </p>
                       </div>
-                    )}
+                    </div>
                   </>
                 ) : (
                   <div className="rounded-lg border border-slate-200 dark:border-[#333333] bg-slate-50 dark:bg-[#1e1e1e] p-8 text-center text-xs text-slate-500">
-                    <p>Click "Explain & Review" in the editor to run Big-O complexity audits and view editorial solutions.</p>
+                    <p>Click "Explain & Review" in the editor toolbar to inspect time/space complexity, syntax check, and approach comparison.</p>
                   </div>
                 )}
               </div>
@@ -1225,22 +1133,8 @@ export default function SnippetPage() {
               </span>
             </div>
 
-            {/* Quick Actions (Boilerplate, Polyglot Rosetta, Copy) */}
+            {/* Quick Actions (Template, Copy) */}
             <div className="flex items-center gap-2 text-xs">
-              {!isSql && (
-                <button
-                  type="button"
-                  onClick={() => setShowPolyglot((prev) => !prev)}
-                  className={`rounded px-2.5 py-1 text-[11px] font-semibold border transition-colors ${
-                    showPolyglot
-                      ? 'bg-indigo-600 text-white border-indigo-500'
-                      : 'bg-white dark:bg-[#262626] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-[#3a3a3a] hover:bg-slate-100 dark:hover:bg-[#333333]'
-                  }`}
-                >
-                  Polyglot Rosetta (4-Lang)
-                </button>
-              )}
-
               <button
                 type="button"
                 onClick={() => {
@@ -1263,59 +1157,6 @@ export default function SnippetPage() {
               </button>
             </div>
           </div>
-
-          {/* Polyglot Translation Drawer (when enabled) */}
-          <AnimatePresence>
-            {showPolyglot && !isSql && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="border-b border-indigo-200 dark:border-indigo-900/60 bg-indigo-50/50 dark:bg-[#181a24] p-3 space-y-2"
-              >
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex gap-1.5">
-                    {DSA_LANGUAGES.map((l) => (
-                      <button
-                        key={l.id}
-                        type="button"
-                        onClick={() => setActivePolyglotLang(l.id)}
-                        className={`rounded px-2.5 py-0.5 text-[11px] font-semibold border ${
-                          activePolyglotLang === l.id
-                            ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm'
-                            : 'bg-white dark:bg-[#262626] text-slate-600 dark:text-slate-300 border-slate-200 dark:border-[#3a3a3a]'
-                        }`}
-                      >
-                        {l.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleTranslatePolyglot(activePolyglotLang)}
-                    disabled={translatingPolyglot}
-                    className="rounded bg-indigo-600 px-2.5 py-0.5 text-[11px] font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-                  >
-                    {translatingPolyglot ? 'Translating…' : `Translate to ${activePolyglotLang}`}
-                  </button>
-                </div>
-
-                <div className="rounded border border-indigo-200 dark:border-indigo-900/40 overflow-hidden">
-                  <CodeEditor
-                    value={
-                      activePolyglotLang === snippet.language
-                        ? currentCode
-                        : polyglotTranslations[activePolyglotLang] || `// Click "Translate to ${activePolyglotLang}" above`
-                    }
-                    language={activePolyglotLang}
-                    height="200px"
-                    readOnly
-                  />
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
           {/* Main Code Editor */}
           <div className="flex-1 min-h-[460px] bg-white dark:bg-[#1e1e1e]">

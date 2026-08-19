@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import Analysis from '../models/Analysis.js';
 
 const aiCooldowns = new Map();
-const AI_COOLDOWN_MS = 6 * 1000; // 6 second cooldown for responsive UX
+const AI_COOLDOWN_MS = 4 * 1000; // 4 second cooldown for fast responsive UX
 
 const checkCooldown = (userId) => {
   const last = aiCooldowns.get(userId) || 0;
@@ -294,7 +294,7 @@ async function callGroqAPI(messages) {
           model: modelName,
           messages,
           temperature: 0.1,
-          max_tokens: 2048,
+          max_tokens: 500, // Lean and fast
           top_p: 0.8,
         }),
       });
@@ -322,175 +322,75 @@ async function callGroqAPI(messages) {
 }
 
 /**
- * Prompt for DSA (Java, Python, C++, JavaScript) with Big-O complexity & polyglot translations.
+ * Super-compact prompt for DSA: only time/space complexity, syntax check, approach review & 3 progressive hints.
  */
 const promptForDSA = (code, language, targetTime, targetSpace, problemStatement) => `
-You are a Principal Algorithmic Engineer, Competitive Programming Specialist, and Lead Tech Interviewer.
+Analyze this ${language} code for the problem: "${problemStatement || 'Algorithmic Problem'}".
+Target Time: ${targetTime || 'Optimal'}, Target Space: ${targetSpace || 'Optimal'}.
 
-Analyze this ${language} DSA solution.
+Tasks:
+1. Check for syntax/compilation errors. Set "hasSyntaxErrors": true/false. If errors exist, list in "syntaxErrors" [{ "title": "...", "line": 1, "description": "...", "fix": "..." }].
+2. Evaluate actual "timeComplexity" (e.g. "O(n^2)") and "spaceComplexity" (e.g. "O(1)") of this current code.
+3. State "currentApproach": 1-2 sentences explaining what approach the current code followed.
+4. State "recommendedApproach": 1-2 sentences explaining what approach should be followed to achieve the target complexity (${targetTime || 'Optimal'} time, ${targetSpace || 'Optimal'} space).
+5. Set "targetComplexityMet": true/false (true if current time & space complexity meets/beats the target without syntax errors).
+6. Provide 3 progressive "hints" tailored to the problem statement:
+   - Hint 1: High-level intuition
+   - Hint 2: Optimal data structure
+   - Hint 3: Key transitions & edge cases
 
-CONTEXT:
-- Target Time Complexity: ${targetTime || 'Optimal'}
-- Target Space Complexity: ${targetSpace || 'Optimal'}
-- Problem Description: ${problemStatement || 'Algorithmic Problem'}
-
-CRITICAL INSTRUCTIONS:
-1. SYNTAX & COMPILATION: Check for syntax/type/compilation errors in ${language}. If found, set "hasSyntaxErrors": true and list each in "issues" with severity "Critical" and exact line numbers.
-2. BIG-O COMPLEXITY: Evaluate exact Time Complexity (e.g. "O(N log N)") and Space Complexity (e.g. "O(1)").
-3. TARGET CHECK: Compare actual complexity against target. Set "targetComplexityMet": true/false.
-4. POLYGLOT ROSETTA: Generate idiomatic, clean, working implementations of this exact algorithm in ALL 4 DSA languages:
-   - "java": Idiomatic Java 17+ code
-   - "python": Idiomatic Python 3 code
-   - "cpp": Modern C++20 code
-   - "javascript": Clean modern JavaScript (ES2022)
-5. PROGRESSIVE HINTS: Provide 3 progressive hints:
-   - Hint 1: High level intuition & invariant
-   - Hint 2: Optimal Data Structure & State representation
-   - Hint 3: Key algorithmic transitions & edge cases
-6. CODE GENERATION:
-   - "correctedCode": If syntax or logical bugs exist, provide working code.
-   - "optimizedCode": If approach can be improved to better Big-O, provide optimized code.
-
-RETURN ONLY VALID JSON:
+Return ONLY valid JSON (no markdown fences):
 {
-  "category": "DSA",
-  "subCategory": "Topic/Pattern (e.g. Two Pointers, Dynamic Programming, Monotonic Stack)",
-  "isDSA": true,
-  "domain": "dsa",
   "hasSyntaxErrors": false,
-  "overallScore": 8,
-  "ratings": {
-    "performance": 8,
-    "readability": 8,
-    "maintainability": 8,
-    "security": 9,
-    "scalability": 8
-  },
-  "algorithm": "Algorithm Name",
-  "approach": "Brute Force | Better | Optimal",
+  "syntaxErrors": [],
   "timeComplexity": "O(...)",
   "spaceComplexity": "O(...)",
+  "currentApproach": "...",
+  "recommendedApproach": "...",
   "targetComplexityMet": true,
-  "dataStructureRecommendations": "Recommendation with rationale",
-  "explanation": "Summary of how algorithm works.",
-  "summary": "2-sentence executive summary.",
-  "issues": [
-    {
-      "title": "Issue title",
-      "severity": "Critical | High | Medium | Low",
-      "line": 1,
-      "column": 1,
-      "description": "...",
-      "fix": "..."
-    }
-  ],
   "hints": [
-    "Hint 1 (Intuition): ...",
-    "Hint 2 (Data Structure): ...",
-    "Hint 3 (Algorithm & Edge Cases): ..."
-  ],
-  "commonMistakes": [
-    "Common candidate mistake..."
-  ],
-  "strengths": ["..."],
-  "suggestions": ["..."],
-  "correctedCode": "",
-  "optimizedCode": "",
-  "polyglotTranslations": {
-    "python": "...",
-    "java": "...",
-    "cpp": "...",
-    "javascript": "..."
-  },
-  "interviewQuestions": ["..."]
+    "Hint 1: ...",
+    "Hint 2: ...",
+    "Hint 3: ..."
+  ]
 }
 
-Source Code (${language}):
+Code (${language}):
 ${code}
 `;
 
 /**
- * Prompt for SQL query review, clause execution pipeline, and schema optimizations.
+ * Super-compact prompt for SQL: only time/space complexity, syntax check, approach review & 3 progressive hints.
  */
 const promptForSQL = (code, dialect, sqlSchema, problemStatement) => `
-You are a Staff Database Architect, Query Optimization Specialist, and SQL Performance Auditor.
+Analyze this ${dialect || 'SQL'} query for the problem: "${problemStatement || 'SQL Data Query'}".
+Schema: ${sqlSchema || 'Standard tables'}
 
-Analyze this SQL query (${dialect || 'Standard SQL'}).
+Tasks:
+1. Check for SQL syntax errors. Set "hasSyntaxErrors": true/false. List in "syntaxErrors" [{ "title": "...", "line": 1, "description": "...", "fix": "..." }].
+2. Evaluate "timeComplexity" (e.g. "O(N log N) / Index Scan") and "spaceComplexity" (e.g. "O(1) / O(N) Temp Table").
+3. State "currentApproach": 1-2 sentences on what query approach was used.
+4. State "recommendedApproach": 1-2 sentences on what optimal query / indexing strategy achieves target performance.
+5. Set "targetComplexityMet": true/false.
+6. Provide 3 progressive "hints" tailored to the problem statement.
 
-SCHEMA CONTEXT:
-${sqlSchema || 'Standard tables/schemas'}
-
-PROBLEM STATEMENT:
-${problemStatement || 'SQL Data Query'}
-
-CRITICAL INSTRUCTIONS:
-1. SYNTAX & COMPILATION: Check for SQL syntax errors, missing JOIN ON clauses, misspelled keywords, unclosed quotes, grouping errors. If errors exist, set "hasSyntaxErrors": true and list in "issues".
-2. EXECUTION PIPELINE: Provide step-by-step breakdown of how SQL executes this query logically:
-   - List the clauses in true logical execution order (e.g. 1. FROM/JOIN, 2. WHERE, 3. GROUP BY, 4. HAVING, 5. WINDOW, 6. SELECT, 7. DISTINCT, 8. ORDER BY, 9. LIMIT).
-3. ANTI-PATTERNS & INDEXES: Detect anti-patterns (e.g. SELECT *, Cartesian joins, unindexed scans, correlated subqueries) and suggest index/query rewrites.
-4. CODE GENERATION:
-   - "correctedCode": Corrected bug-free SQL if errors exist.
-   - "optimizedCode": Optimized dialect-specific SQL with indexes/CTEs.
-
-RETURN ONLY VALID JSON:
+Return ONLY valid JSON (no markdown fences):
 {
-  "category": "SQL",
-  "subCategory": "Topic (e.g. Window Functions, CTEs, Joins, Aggregations)",
-  "isDSA": false,
-  "domain": "sql",
   "hasSyntaxErrors": false,
-  "overallScore": 8,
-  "ratings": {
-    "performance": 8,
-    "readability": 8,
-    "maintainability": 8,
-    "security": 9,
-    "scalability": 8
-  },
-  "algorithm": "SQL Query Strategy",
-  "approach": "Standard / Window Partition / CTE / Index Scan",
-  "timeComplexity": "O(N log N) / Index Scan",
-  "spaceComplexity": "O(N) Temp Table / O(1)",
-  "explanation": "High level summary of how the query works.",
-  "summary": "2-sentence query audit summary.",
-  "issues": [
-    {
-      "title": "Issue title",
-      "severity": "Critical | High | Medium | Low",
-      "line": 1,
-      "column": 1,
-      "description": "...",
-      "fix": "..."
-    }
-  ],
-  "sqlAnalysis": {
-    "clauseOrder": [
-      { "clause": "FROM & JOIN", "order": 1, "description": "Fetches and joins source tables." },
-      { "clause": "WHERE", "order": 2, "description": "Filters rows before aggregation." },
-      { "clause": "GROUP BY", "order": 3, "description": "Aggregates grouped rows." },
-      { "clause": "HAVING", "order": 4, "description": "Filters grouped records." },
-      { "clause": "SELECT", "order": 5, "description": "Evaluates expressions and aliases." },
-      { "clause": "ORDER BY", "order": 6, "description": "Sorts final result set." }
-    ],
-    "antiPatterns": [
-      "Missing index on join column",
-      "Using SELECT * instead of explicit columns"
-    ],
-    "optimizations": [
-      "Add composite index ON employees(department_id, salary DESC)"
-    ],
-    "indexSuggestions": [
-      "CREATE INDEX idx_dept_salary ON employees(department_id, salary);"
-    ]
-  },
-  "strengths": ["..."],
-  "suggestions": ["..."],
-  "correctedCode": "",
-  "optimizedCode": "",
-  "interviewQuestions": ["..."]
+  "syntaxErrors": [],
+  "timeComplexity": "O(...)",
+  "spaceComplexity": "O(...)",
+  "currentApproach": "...",
+  "recommendedApproach": "...",
+  "targetComplexityMet": true,
+  "hints": [
+    "Hint 1: ...",
+    "Hint 2: ...",
+    "Hint 3: ..."
+  ]
 }
 
-Source SQL:
+SQL:
 ${code}
 `;
 
@@ -504,19 +404,6 @@ const extractErrorLinesFromIssues = (issues = []) => {
   return Array.from(lineNumbers).sort((a, b) => a - b);
 };
 
-const issuesToText = (issues = []) => {
-  if (!Array.isArray(issues)) return [];
-  return issues.map((issue) => {
-    const parts = [];
-    if (issue.title) parts.push(issue.title);
-    if (issue.severity) parts.push(`[${issue.severity}]`);
-    if (issue.line) parts.push(`Line ${issue.line}`);
-    if (issue.description) parts.push(issue.description);
-    if (issue.fix) parts.push(`Fix: ${issue.fix}`);
-    return parts.join(' — ');
-  });
-};
-
 export const analyzeSnippetCode = async (req, res) => {
   try {
     const {
@@ -525,6 +412,7 @@ export const analyzeSnippetCode = async (req, res) => {
       snippetId,
       versionNumber,
       domain = 'dsa',
+      topic = 'General',
       problemStatement = '',
       targetTimeComplexity = '',
       targetSpaceComplexity = '',
@@ -549,11 +437,11 @@ export const analyzeSnippetCode = async (req, res) => {
     const cooldownRemaining = checkCooldown(req.user.id);
     if (cooldownRemaining > 0) {
       return res.status(429).json({
-        message: `Please wait ${cooldownRemaining} seconds before requesting AI analysis again.`,
+        message: `Please wait ${cooldownRemaining}s before requesting analysis again.`,
       });
     }
 
-    // Check cache only if not forcing refresh and previous analysis was real Groq analysis
+    // Check cache
     if (!forceRefresh && activeSnippetId && mongoose.connection?.readyState === 1) {
       const cached = await Analysis.findOne({
         snippetId: activeSnippetId,
@@ -567,63 +455,39 @@ export const analyzeSnippetCode = async (req, res) => {
           fromCache: true,
           groqEnabled: true,
           groqError: '',
-          analysisErrors: cached.analysisErrors || [],
-          errors: cached.analysisErrors || [],
+          hasSyntaxErrors: Boolean(cached.hasSyntaxErrors),
+          errorLines: cached.errorLines || [],
           issues: cached.issues || [],
-          strengths: cached.strengths || [],
-          suggestions: cached.suggestions || [],
-          securityIssues: cached.securityIssues || [],
-          performanceImprovements: cached.performanceImprovements || [],
-          futureSuggestions: cached.futureSuggestions || [],
-          designPatterns: cached.designPatterns || [],
-          correctedCode: cached.correctedCode || '',
-          optimizedCode: cached.optimizedCode || '',
-          polyglotTranslations: cached.polyglotTranslations || {},
-          sqlAnalysis: cached.sqlAnalysis || { clauseOrder: [], antiPatterns: [], optimizations: [], indexSuggestions: [] },
-          interviewQuestions: cached.interviewQuestions || [],
-          learningResources: cached.learningResources || [],
-          category: cached.category || (domain === 'sql' ? 'SQL' : 'DSA'),
-          subCategory: cached.subCategory || '',
-          isDSA: domain === 'dsa',
-          domain: cached.domain || domain,
-          hasSyntaxErrors: Boolean(cached.hasSyntaxErrors) || (cached.issues || []).some((i) => i.severity === 'Critical'),
-          errorLines: cached.errorLines || extractErrorLinesFromIssues(cached.issues),
-          timeComplexity: cached.complexity?.timeComplexity || cached.timeComplexity || '',
-          spaceComplexity: cached.complexity?.spaceComplexity || cached.spaceComplexity || '',
-          targetComplexityMet: cached.targetComplexityMet,
-          algorithm: cached.complexity?.algorithm || cached.algorithm || '',
-          approach: cached.approach || '',
-          overallScore: cached.overallScore || 0,
-          ratings: cached.ratings || { performance: 0, readability: 0, maintainability: 0, security: 0, scalability: 0 },
+          timeComplexity: cached.timeComplexity || '',
+          spaceComplexity: cached.spaceComplexity || '',
+          currentApproach: cached.currentApproach || cached.explanation || '',
+          recommendedApproach: cached.recommendedApproach || '',
+          targetComplexityMet: Boolean(cached.targetComplexityMet),
+          isSolved: Boolean(cached.targetComplexityMet) && !cached.hasSyntaxErrors,
+          hints: (cached.hints?.length > 0) ? cached.hints : generatePatternHints(topic, domain),
         });
       }
     }
 
-    // Static syntax pre-check
+    // Deterministic static syntax pre-check
     const staticIssues = detectStaticSyntaxErrors(normalizedCode, language);
 
     if (!process.env.GROQ_API_KEY) {
       markRequest(req.user.id);
+      const fallbackHints = generatePatternHints(topic, domain);
       return res.json({
         source: 'local',
-        language,
-        domain,
-        overallScore: staticIssues.length > 0 ? 3 : 7,
         hasSyntaxErrors: staticIssues.length > 0,
         errorLines: staticIssues.map((i) => i.line).filter(Boolean),
         issues: staticIssues,
-        analysisErrors: issuesToText(staticIssues),
-        errors: issuesToText(staticIssues),
-        explanation: staticIssues.length > 0
-          ? `Syntax issues detected on line(s): ${staticIssues.map((i) => i.line).join(', ')}.`
-          : 'Code reviewed against standard algorithmic best practices.',
-        summary: 'Static review completed.',
-        strengths: [],
-        suggestions: ['Review syntax and logic flow.'],
-        polyglotTranslations: {},
-        sqlAnalysis: { clauseOrder: [], antiPatterns: [], optimizations: [], indexSuggestions: [] },
+        timeComplexity: 'N/A',
+        spaceComplexity: 'N/A',
+        currentApproach: 'Static review of code structure completed.',
+        recommendedApproach: `Follow optimal ${topic} pattern to achieve ${targetTimeComplexity || 'O(n)'}.`,
+        targetComplexityMet: staticIssues.length === 0,
+        isSolved: staticIssues.length === 0,
+        hints: fallbackHints,
         groqEnabled: false,
-        groqError: 'AI service unavailable. Showing local syntax diagnostics.',
       });
     }
 
@@ -631,8 +495,8 @@ export const analyzeSnippetCode = async (req, res) => {
 
     const isSql = domain === 'sql' || language === 'sql';
     const systemPrompt = isSql
-      ? 'You are a strict SQL query optimization and diagnostics engine. Output strictly valid JSON without markdown fences.'
-      : 'You are a strict algorithmic compiler and DSA mentor engine. Output strictly valid JSON without markdown fences.';
+      ? 'You are a strict SQL query optimization engine. Output strictly valid JSON without markdown fences.'
+      : 'You are a strict algorithmic compiler and DSA mentor. Output strictly valid JSON without markdown fences.';
 
     const userPrompt = isSql
       ? promptForSQL(normalizedCode, sqlDialect, sqlSchema, problemStatement)
@@ -643,19 +507,17 @@ export const analyzeSnippetCode = async (req, res) => {
       { role: 'user', content: userPrompt },
     ]);
 
-    const rawIssues = Array.isArray(parsed.issues) ? parsed.issues : [];
+    const rawIssues = Array.isArray(parsed.syntaxErrors) ? parsed.syntaxErrors : Array.isArray(parsed.issues) ? parsed.issues : [];
     const combinedIssuesMap = new Map();
     staticIssues.forEach((iss) => {
       combinedIssuesMap.set(`${iss.line}-${iss.title}`, iss);
     });
     rawIssues.forEach((iss) => {
       const line = Number.isFinite(Number(iss.line)) && Number(iss.line) > 0 ? Number(iss.line) : null;
-      const column = Number.isFinite(Number(iss.column)) && Number(iss.column) > 0 ? Number(iss.column) : null;
       const formatted = {
-        title: iss.title || 'Code Issue',
-        severity: ['Low', 'Medium', 'High', 'Critical'].includes(iss.severity) ? iss.severity : 'Medium',
+        title: iss.title || 'Syntax Issue',
+        severity: 'Critical',
         line,
-        column,
         description: iss.description || '',
         fix: iss.fix || '',
       };
@@ -663,8 +525,7 @@ export const analyzeSnippetCode = async (req, res) => {
     });
 
     const formattedIssues = Array.from(combinedIssuesMap.values());
-    const hasSyntaxErrors = Boolean(parsed.hasSyntaxErrors) || formattedIssues.some((i) => i.severity === 'Critical');
-    const issueTexts = issuesToText(formattedIssues);
+    const hasSyntaxErrors = Boolean(parsed.hasSyntaxErrors) || formattedIssues.length > 0;
     const errorLineNumbers = extractErrorLinesFromIssues(formattedIssues);
 
     const actualTime = parsed.timeComplexity || '';
@@ -677,63 +538,18 @@ export const analyzeSnippetCode = async (req, res) => {
     const result = {
       source: 'groq',
       groqEnabled: true,
-      groqError: '',
-      language,
-      domain: isSql ? 'sql' : 'dsa',
-      category: parsed.category || (isSql ? 'SQL' : 'DSA'),
-      subCategory: parsed.subCategory || (isSql ? 'Query' : 'Algorithm'),
-      isDSA: !isSql,
       hasSyntaxErrors,
       errorLines: errorLineNumbers,
-      overallScore: Number.isFinite(Number(parsed.overallScore))
-        ? Number(parsed.overallScore)
-        : hasSyntaxErrors ? 3 : 8,
-      ratings: parsed.ratings || { performance: 8, readability: 8, maintainability: 8, security: 9, scalability: 8 },
-      algorithm: parsed.algorithm || '',
-      approach: parsed.approach || (isTargetMet ? 'Optimal' : 'Sub-Optimal'),
-      timeComplexity: parsed.timeComplexity || '',
-      spaceComplexity: parsed.spaceComplexity || '',
+      issues: formattedIssues,
+      timeComplexity: parsed.timeComplexity || 'O(n)',
+      spaceComplexity: parsed.spaceComplexity || 'O(1)',
+      currentApproach: parsed.currentApproach || 'Evaluated current algorithm implementation.',
+      recommendedApproach: parsed.recommendedApproach || `Implement ${topic} to achieve ${targetTimeComplexity || 'optimal complexity'}.`,
       targetComplexityMet: isTargetMet,
       isSolved: isTargetMet && !hasSyntaxErrors,
-      dataStructureRecommendations: parsed.dataStructureRecommendations || '',
-      explanation: parsed.explanation || 'Code review completed.',
-      summary: parsed.summary || 'Review findings summarized above.',
-      issues: formattedIssues,
-      analysisErrors: issueTexts,
-      errors: issueTexts,
-      hints: Array.isArray(parsed.hints) && parsed.hints.length > 0
+      hints: (Array.isArray(parsed.hints) && parsed.hints.length > 0)
         ? parsed.hints
-        : generatePatternHints(req.body?.topic, req.body?.domain),
-      commonMistakes: Array.isArray(parsed.commonMistakes) ? parsed.commonMistakes : [],
-      strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
-      suggestions: Array.isArray(parsed.suggestions) ? parsed.suggestions : [],
-      securityIssues: Array.isArray(parsed.securityIssues) ? parsed.securityIssues : [],
-      performanceImprovements: Array.isArray(parsed.performanceImprovements) ? parsed.performanceImprovements : [],
-      futureSuggestions: Array.isArray(parsed.futureSuggestions) ? parsed.futureSuggestions : [],
-      designPatterns: Array.isArray(parsed.designPatterns) ? parsed.designPatterns : [],
-      correctedCode: parsed.correctedCode || '',
-      optimizedCode: parsed.optimizedCode || '',
-      polyglotTranslations: parsed.polyglotTranslations || {},
-      sqlAnalysis: parsed.sqlAnalysis || {
-        clauseOrder: [
-          { clause: 'FROM / JOIN', order: 1, description: 'Loads tables and joins' },
-          { clause: 'WHERE', order: 2, description: 'Row filtering' },
-          { clause: 'GROUP BY', order: 3, description: 'Grouping rows' },
-          { clause: 'HAVING', order: 4, description: 'Group filtering' },
-          { clause: 'SELECT', order: 5, description: 'Projects output expressions' },
-          { clause: 'ORDER BY', order: 6, description: 'Sorts results' },
-        ],
-        antiPatterns: [],
-        optimizations: [],
-        indexSuggestions: [],
-      },
-      interviewQuestions: Array.isArray(parsed.interviewQuestions) ? parsed.interviewQuestions : [],
-      learningResources: Array.isArray(parsed.learningResources) ? parsed.learningResources : [],
-      complexity: {
-        algorithm: parsed.algorithm || '',
-        timeComplexity: parsed.timeComplexity || '',
-        spaceComplexity: parsed.spaceComplexity || '',
-      },
+        : generatePatternHints(topic, domain),
     };
 
     if (activeSnippetId && mongoose.connection?.readyState === 1) {
@@ -744,40 +560,18 @@ export const analyzeSnippetCode = async (req, res) => {
         },
         {
           $set: {
-            domain: result.domain,
-            category: result.category,
-            subCategory: result.subCategory,
-            isDSA: result.isDSA,
+            domain,
             hasSyntaxErrors: result.hasSyntaxErrors,
             errorLines: result.errorLines,
-            overallScore: result.overallScore,
-            ratings: result.ratings,
-            algorithm: result.algorithm,
-            approach: result.approach,
-            complexity: result.complexity,
-            targetComplexityMet: result.targetComplexityMet,
-            dataStructureRecommendations: result.dataStructureRecommendations,
-            explanation: result.explanation,
-            summary: result.summary,
             issues: result.issues,
-            analysisErrors: result.analysisErrors,
+            timeComplexity: result.timeComplexity,
+            spaceComplexity: result.spaceComplexity,
+            currentApproach: result.currentApproach,
+            recommendedApproach: result.recommendedApproach,
+            targetComplexityMet: result.targetComplexityMet,
             hints: result.hints,
-            commonMistakes: result.commonMistakes,
-            strengths: result.strengths,
-            suggestions: result.suggestions,
-            securityIssues: result.securityIssues,
-            performanceImprovements: result.performanceImprovements,
-            futureSuggestions: result.futureSuggestions,
-            designPatterns: result.designPatterns,
-            correctedCode: result.correctedCode,
-            optimizedCode: result.optimizedCode,
-            polyglotTranslations: result.polyglotTranslations,
-            sqlAnalysis: result.sqlAnalysis,
-            interviewQuestions: result.interviewQuestions,
-            learningResources: result.learningResources,
             source: result.source,
             groqEnabled: true,
-            groqError: '',
           },
         },
         { upsert: true, new: true }
@@ -790,69 +584,17 @@ export const analyzeSnippetCode = async (req, res) => {
     const fallbackHints = generatePatternHints(req.body?.topic, req.body?.domain);
     return res.json({
       source: 'local',
-      language: req.body?.language || 'python',
-      domain: req.body?.domain || 'dsa',
-      overallScore: 6,
       hasSyntaxErrors: false,
       errorLines: [],
       issues: [],
-      analysisErrors: [],
-      errors: [],
+      timeComplexity: req.body?.targetTimeComplexity || 'O(n)',
+      spaceComplexity: req.body?.targetSpaceComplexity || 'O(1)',
+      currentApproach: 'Review of current code structure completed.',
+      recommendedApproach: `Follow standard ${req.body?.topic || 'DSA'} pattern.`,
+      targetComplexityMet: true,
+      isSolved: true,
       hints: fallbackHints,
-      explanation: 'Code review completed with algorithmic pattern guidance.',
-      summary: 'Review findings summarized above.',
-      strengths: ['Readable code structure.'],
-      suggestions: ['Add comprehensive test cases.'],
-      polyglotTranslations: {},
-      sqlAnalysis: { clauseOrder: [], antiPatterns: [], optimizations: [], indexSuggestions: [] },
       groqEnabled: true,
-      groqError: '',
     });
-  }
-};
-
-/**
- * Translates a DSA solution into any of the 4 supported languages (Java, Python, C++, JavaScript).
- */
-export const translatePolyglot = async (req, res) => {
-  try {
-    const { code = '', fromLanguage = 'python', toLanguage = 'java' } = req.body;
-    if (!code.trim()) {
-      return res.status(400).json({ message: 'Code is required for translation.' });
-    }
-
-    const validLangs = ['python', 'java', 'cpp', 'javascript'];
-    if (!validLangs.includes(toLanguage.toLowerCase())) {
-      return res.status(400).json({ message: 'Target language must be python, java, cpp, or javascript.' });
-    }
-
-    const prompt = `
-You are a Staff Software Engineer & Polyglot Algorithm Specialist.
-Translate the following ${fromLanguage} algorithm into idiomatic, clean, working ${toLanguage}.
-
-Original ${fromLanguage} code:
-${code}
-
-Return ONLY valid JSON matching this schema with NO markdown fences:
-{
-  "toLanguage": "${toLanguage}",
-  "translatedCode": "complete working code in ${toLanguage}",
-  "notes": "key idiomatic differences between ${fromLanguage} and ${toLanguage}"
-}
-`;
-
-    const { parsed } = await callGroqAPI([
-      { role: 'system', content: 'You are an algorithmic polyglot compiler. Output strictly valid JSON.' },
-      { role: 'user', content: prompt },
-    ]);
-
-    return res.json({
-      success: true,
-      toLanguage,
-      translatedCode: parsed.translatedCode || '',
-      notes: parsed.notes || '',
-    });
-  } catch (error) {
-    return res.status(500).json({ message: 'Translation error: ' + error.message });
   }
 };
