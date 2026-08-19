@@ -17,6 +17,7 @@ import {
   DEFAULT_MOCK_SQL_SCHEMA,
   TIME_COMPLEXITY_OPTIONS,
   SPACE_COMPLEXITY_OPTIONS,
+  TOPIC_DEFAULT_TAGS,
   detectTopicAndTags,
 } from '../utils/languages.js';
 
@@ -50,7 +51,7 @@ export default function CreatePage() {
       language: initialDomain === 'sql' ? 'sql' : 'python',
       difficulty: 'Medium',
       topic: initialDomain === 'sql' ? 'Window Functions' : 'Two Pointers',
-      tags: 'two-pointers, array',
+      tags: 'two-pointers, array, sorted-array',
       isPublic: true,
       commitMessage: 'Initial version',
       problemStatement: '',
@@ -64,12 +65,18 @@ export default function CreatePage() {
   const watchedTopic = watch('topic');
 
   // Auto-detect topic & tags when problem description or title changes
-  const handleAutoDetection = (text) => {
-    if (!text || text.length < 5) return;
-    const { topic: detectedTopic, tags: detectedTags } = detectTopicAndTags(text, domain);
+  const handleAutoDetection = (newText, fieldType = 'description') => {
+    const currentTitle = fieldType === 'title' ? newText : (watch('title') || '');
+    const currentDesc = fieldType === 'description' ? newText : (watch('problemStatement') || '');
+    const combined = `${currentTitle} ${currentDesc}`.trim();
+    if (!combined || combined.length < 4) return;
+
+    const { topic: detectedTopic, tags: detectedTags } = detectTopicAndTags(combined, domain);
     if (detectedTopic) {
       setValue('topic', detectedTopic);
-      setValue('tags', detectedTags.join(', '));
+      if (detectedTags?.length > 0) {
+        setValue('tags', detectedTags.join(', '));
+      }
       setAutoDetectedBadge(detectedTopic);
     }
   };
@@ -210,7 +217,8 @@ export default function CreatePage() {
                     maxLength: { value: 200, message: 'Title must be under 200 characters' },
                   })}
                   onChange={(e) => {
-                    handleAutoDetection(e.target.value);
+                    setValue('title', e.target.value);
+                    handleAutoDetection(e.target.value, 'title');
                   }}
                   placeholder={domain === 'dsa' ? 'e.g. Trapping Rain Water' : 'e.g. Department Top Three Salaries'}
                   className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
@@ -289,6 +297,14 @@ export default function CreatePage() {
                 <select
                   id="topic"
                   {...register('topic')}
+                  onChange={(e) => {
+                    const newTopic = e.target.value;
+                    setValue('topic', newTopic);
+                    const defaultTags = TOPIC_DEFAULT_TAGS[newTopic] || [];
+                    if (defaultTags.length > 0) {
+                      setValue('tags', defaultTags.join(', '));
+                    }
+                  }}
                   className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:border-blue-500 focus:outline-none"
                 >
                   {(domain === 'dsa' ? DSA_TOPICS : SQL_TOPICS).map((top) => (
@@ -347,7 +363,8 @@ export default function CreatePage() {
                 id="problemStatement"
                 {...register('problemStatement')}
                 onChange={(e) => {
-                  handleAutoDetection(e.target.value);
+                  setValue('problemStatement', e.target.value);
+                  handleAutoDetection(e.target.value, 'description');
                 }}
                 rows={4}
                 placeholder={

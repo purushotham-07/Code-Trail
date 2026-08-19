@@ -108,19 +108,29 @@ export const generatePatternHints = (topic = 'General', domain = 'dsa') => {
  */
 export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
   const issues = [];
-  const lang = String(language || 'python').trim().toLowerCase();
-  const lines = code.split('\n');
+  if (!code || typeof code !== 'string') return issues;
 
-  // 1. Bracket matching
+  const lang = String(language || 'python').trim().toLowerCase();
+  const rawLines = code.split('\n');
+
+  // 1. Bracket & quote matching
   const stack = [];
   const pairs = { '}': '{', ')': '(', ']': '[' };
   const opening = new Set(['{', '(', '[']);
   const closing = new Set(['}', ')', ']']);
 
-  lines.forEach((lineText, lineIdx) => {
+  rawLines.forEach((lineText, lineIdx) => {
     const lineNum = lineIdx + 1;
     const trimmed = lineText.trim();
-    if (trimmed.startsWith('//') || trimmed.startsWith('#') || trimmed.startsWith('--') || trimmed.startsWith('/*')) return;
+    if (
+      trimmed.startsWith('//') ||
+      trimmed.startsWith('#') ||
+      trimmed.startsWith('--') ||
+      trimmed.startsWith('/*') ||
+      trimmed.startsWith('*')
+    ) {
+      return;
+    }
 
     let inString = false;
     let stringChar = '';
@@ -150,7 +160,7 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
               severity: 'Critical',
               line: lineNum,
               column: colIdx + 1,
-              description: `Found unexpected '${ch}' with no matching opening bracket.`,
+              description: `Found closing bracket '${ch}' with no matching opening bracket '${pairs[ch]}'.`,
               fix: `Remove extra '${ch}' or add matching '${pairs[ch]}'.`,
             });
           } else {
@@ -175,15 +185,16 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
 
   // 2. Python syntax checks
   if (lang === 'python' || lang === 'py') {
-    const blockHeaders = /^\s*(def\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(.*\)|if\s+.*|elif\s+.*|else|for\s+.*|while\s+.*|class\s+[a-zA-Z_][a-zA-Z0-9_]*.*|try|except.*|finally)\s*$/;
-    lines.forEach((lineText, lineIdx) => {
+    const blockHeaders = /^\s*(def\s+[a-zA-Z_][a-zA-Z0-9_]*\s*\(.*?\)|if\s+.*|elif\s+.*|else|for\s+.*|while\s+.*|class\s+[a-zA-Z_][a-zA-Z0-9_]*.*|try|except.*|finally|with\s+.*)\s*$/;
+    rawLines.forEach((lineText, lineIdx) => {
       const lineNum = lineIdx + 1;
       const trimmed = lineText.trim();
       if (!trimmed || trimmed.startsWith('#')) return;
 
+      // Missing colon in Python header
       if (blockHeaders.test(trimmed) && !trimmed.endsWith(':')) {
         issues.push({
-          title: 'Missing colon in Python header',
+          title: 'Missing colon (:) at end of header',
           severity: 'Critical',
           line: lineNum,
           column: lineText.length,
@@ -191,14 +202,179 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
           fix: `Add ':' at the end of line ${lineNum}.`,
         });
       }
+
+      // else if instead of elif
+      if (/^\s*else\s+if\b/.test(trimmed)) {
+        issues.push({
+          title: "Invalid keyword 'else if' in Python",
+          severity: 'Critical',
+          line: lineNum,
+          column: lineText.indexOf('else if') + 1,
+          description: "Python uses 'elif' instead of 'else if'.",
+          fix: "Replace 'else if' with 'elif'.",
+        });
+      }
+
+      // Logical operators && / || in Python
+      if (/[^&]&&[^&]/.test(lineText) || /[^|]\|\|[^|]/.test(lineText)) {
+        issues.push({
+          title: "Invalid operator '&&' or '||' in Python",
+          severity: 'Critical',
+          line: lineNum,
+          column: 1,
+          description: "Python uses 'and' and 'or' keywords.",
+          fix: "Replace '&&' with 'and', and '||' with 'or'.",
+        });
+      }
+
+      // JS/C++ triple equals ===
+      if (lineText.includes('===') || lineText.includes('!==')) {
+        issues.push({
+          title: "Invalid operator '===' or '!==' in Python",
+          severity: 'Critical',
+          line: lineNum,
+          column: 1,
+          description: "Python uses '==' for equality and '!=' for inequality.",
+          fix: "Replace '===' with '==' and '!==' with '!='.",
+        });
+      }
+
+      // ++ or -- in Python
+      if (/\b[a-zA-Z_][a-zA-Z0-9_]*\+\+/.test(lineText) || /\+\+[a-zA-Z_][a-zA-Z0-9_]*/.test(lineText)) {
+        issues.push({
+          title: "Invalid operator '++' in Python",
+          severity: 'Critical',
+          line: lineNum,
+          column: 1,
+          description: "Python does not support '++'. Use '+=' instead.",
+          fix: 'Replace var++ with var += 1.',
+        });
+      }
+
+      // Lowercase booleans in Python
+      if (/\b(true|false|null)\b/.test(lineText) && !lineText.includes('"') && !lineText.includes("'")) {
+        const match = lineText.match(/\b(true|false|null)\b/);
+        if (match) {
+          const cap = match[1] === 'null' ? 'None' : match[1].charAt(0).toUpperCase() + match[1].slice(1);
+          issues.push({
+            title: `Incorrect literal '${match[1]}' in Python`,
+            severity: 'Critical',
+            line: lineNum,
+            column: lineText.indexOf(match[1]) + 1,
+            description: `Python booleans and null are capitalized: ${cap}.`,
+            fix: `Replace '${match[1]}' with '${cap}'.`,
+          });
+        }
+      }
+
+      // Typos
+      if (/\b(retun|retrun|reutrn)\b/.test(lineText)) {
+        issues.push({
+          title: "Misspelled keyword 'return'",
+          severity: 'Critical',
+          line: lineNum,
+          column: 1,
+          description: "Misspelled 'return' keyword.",
+          fix: "Replace with 'return'.",
+        });
+      }
     });
   }
 
-  // 3. JavaScript for-loop / syntax check
-  if (lang === 'javascript' || lang === 'js') {
-    lines.forEach((lineText, lineIdx) => {
+  // 3. Java / C++ / C Specific Rules
+  if (['java', 'cpp', 'c', 'c++'].includes(lang)) {
+    rawLines.forEach((lineText, lineIdx) => {
       const lineNum = lineIdx + 1;
-      const forMatch = lineText.match(/for\s*\(\s*(?:let|var|const)\s+[^;)]+\)/);
+      const trimmed = lineText.trim();
+      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*') || trimmed.startsWith('*') || trimmed.startsWith('#')) {
+        return;
+      }
+
+      // Semicolon check
+      const isStatementCandidate =
+        !trimmed.endsWith(';') &&
+        !trimmed.endsWith('{') &&
+        !trimmed.endsWith('}') &&
+        !trimmed.endsWith(':') &&
+        !trimmed.startsWith('if') &&
+        !trimmed.startsWith('for') &&
+        !trimmed.startsWith('while') &&
+        !trimmed.startsWith('class') &&
+        !trimmed.startsWith('public class') &&
+        !trimmed.startsWith('interface') &&
+        !trimmed.startsWith('else') &&
+        !trimmed.startsWith('try') &&
+        !trimmed.startsWith('catch') &&
+        !trimmed.startsWith('finally') &&
+        !trimmed.startsWith('switch') &&
+        !trimmed.startsWith('case') &&
+        !trimmed.startsWith('default:') &&
+        !trimmed.startsWith('template') &&
+        !trimmed.startsWith('#') &&
+        !trimmed.endsWith('(') &&
+        !trimmed.endsWith(',');
+
+      if (isStatementCandidate && (trimmed.startsWith('return ') || trimmed.startsWith('int ') || trimmed.startsWith('long ') || trimmed.startsWith('double ') || trimmed.startsWith('bool ') || trimmed.startsWith('boolean ') || trimmed.startsWith('String ') || trimmed.startsWith('auto ') || trimmed.includes('='))) {
+        issues.push({
+          title: 'Missing semicolon (;) at end of statement',
+          severity: 'Critical',
+          line: lineNum,
+          column: lineText.length,
+          description: `Statement "${trimmed}" is missing a terminating semicolon (;).`,
+          fix: `Add ';' at the end of line ${lineNum}.`,
+        });
+      }
+
+      // Python keywords in Java/C++
+      if (/\b(elif|def\s+|None|pass)\b/.test(lineText)) {
+        issues.push({
+          title: 'Python keyword detected in C++/Java',
+          severity: 'Critical',
+          line: lineNum,
+          column: 1,
+          description: 'Python syntax (def, elif, None, pass) is not valid in Java/C++.',
+          fix: 'Use Java/C++ type declarations and if/else syntax.',
+        });
+      }
+
+      // For loop check
+      const forMatch = lineText.match(/for\s*\((.*?)\)/);
+      if (forMatch && !lineText.includes(':')) {
+        const header = forMatch[1];
+        const semicolons = (header.match(/;/g) || []).length;
+        if (semicolons < 2) {
+          issues.push({
+            title: 'Syntax error in for-loop header',
+            severity: 'Critical',
+            line: lineNum,
+            column: lineText.indexOf('for') + 1,
+            description: "3-part for loop requires semicolons: for (init; condition; increment).",
+            fix: "Replace commas with semicolons in for-loop header.",
+          });
+        }
+      }
+    });
+  }
+
+  // 4. JavaScript Specific Rules
+  if (['javascript', 'js', 'typescript', 'ts'].includes(lang)) {
+    rawLines.forEach((lineText, lineIdx) => {
+      const lineNum = lineIdx + 1;
+      const trimmed = lineText.trim();
+      if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('/*')) return;
+
+      if (/\b(elif|def\s+|None|pass)\b/.test(lineText)) {
+        issues.push({
+          title: 'Python keyword in JavaScript',
+          severity: 'Critical',
+          line: lineNum,
+          column: 1,
+          description: "Python syntax ('def', 'elif', 'None') is not valid in JavaScript.",
+          fix: "Use 'function', 'else if', and 'null/undefined'.",
+        });
+      }
+
+      const forMatch = lineText.match(/for\s*\(\s*(?:let|var|const)\s+([^;)]+)\)/);
       if (forMatch && !lineText.includes(' of ') && !lineText.includes(' in ')) {
         const semicolons = (forMatch[0].match(/;/g) || []).length;
         if (semicolons < 2) {
@@ -215,10 +391,13 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
     });
   }
 
-  // 4. SQL checks
+  // 5. SQL Specific Rules
   if (lang === 'sql') {
-    lines.forEach((lineText, lineIdx) => {
+    rawLines.forEach((lineText, lineIdx) => {
       const lineNum = lineIdx + 1;
+      const trimmed = lineText.trim();
+      if (!trimmed || trimmed.startsWith('--') || trimmed.startsWith('/*')) return;
+
       if (/\bWHER\b/i.test(lineText)) {
         issues.push({
           title: "SQL keyword typo 'WHER'",
@@ -227,6 +406,16 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
           column: lineText.search(/\bWHER\b/i) + 1,
           description: "Keyword 'WHER' is misspelled.",
           fix: "Replace 'WHER' with 'WHERE'.",
+        });
+      }
+      if (/\bSELETC\b/i.test(lineText) || /\bSELET\b/i.test(lineText)) {
+        issues.push({
+          title: "SQL keyword typo in 'SELECT'",
+          severity: 'Critical',
+          line: lineNum,
+          column: 1,
+          description: "Keyword 'SELECT' is misspelled.",
+          fix: "Replace with 'SELECT'.",
         });
       }
       if (/\bINER\s+JOIN\b/i.test(lineText)) {
@@ -239,14 +428,14 @@ export const detectStaticSyntaxErrors = (code = '', language = 'python') => {
           fix: "Replace 'INER JOIN' with 'INNER JOIN'.",
         });
       }
-      if (/^\s*GROUP\s+BY\s*$/i.test(lineText.trim())) {
+      if (/,\s*FROM\b/i.test(lineText)) {
         issues.push({
-          title: 'Incomplete GROUP BY clause',
+          title: 'Trailing comma before FROM clause',
           severity: 'Critical',
           line: lineNum,
-          column: 1,
-          description: 'GROUP BY clause requires at least one column expression.',
-          fix: 'Specify columns to group by.',
+          column: lineText.search(/,\s*FROM\b/i) + 1,
+          description: "SQL syntax error: unexpected comma immediately before 'FROM'.",
+          fix: "Remove the trailing comma before 'FROM'.",
         });
       }
     });

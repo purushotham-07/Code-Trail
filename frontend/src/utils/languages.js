@@ -83,113 +83,84 @@ export const SPACE_COMPLEXITY_OPTIONS = [
   { value: 'O(k)', label: 'O(k) - Window / Top K Elements' },
 ];
 
+export const TOPIC_DEFAULT_TAGS = {
+  'Two Pointers': ['two-pointers', 'array', 'sorted-array'],
+  'Sliding Window': ['sliding-window', 'array', 'string', 'substring'],
+  'Stack & Monotonic Stack': ['stack', 'monotonic-stack', 'next-greater-element'],
+  'Binary Search': ['binary-search', 'array', 'logarithmic-time'],
+  'Dynamic Programming': ['dynamic-programming', 'memoization', 'tabulation', 'dp'],
+  'Heap & Priority Queue': ['heap', 'priority-queue', 'top-k', 'min-heap'],
+  'Linked List': ['linked-list', 'two-pointers', 'fast-and-slow'],
+  'Trees & BST': ['tree', 'binary-tree', 'binary-search-tree', 'dfs'],
+  'Graphs (BFS/DFS)': ['graph', 'bfs', 'dfs', 'shortest-path'],
+  'Backtracking': ['backtracking', 'recursion', 'permutations', 'subsets'],
+  'Tries': ['trie', 'prefix-tree', 'string', 'autocomplete'],
+  'Bit Manipulation': ['bit-manipulation', 'bitwise', 'xor', 'math'],
+  'Greedy': ['greedy', 'sorting', 'optimization'],
+  'Intervals': ['intervals', 'sorting', 'merge-intervals'],
+  'Math & Geometry': ['math', 'geometry', 'number-theory'],
+  'Arrays & Hashing': ['array', 'hash-table', 'hash-map', 'lookup'],
+  // SQL
+  'Window Functions': ['sql', 'window-functions', 'over-partition', 'ranking'],
+  'CTEs & Recursive Queries': ['sql', 'cte', 'with-recursive', 'hierarchical'],
+  'Multi-Table Joins': ['sql', 'joins', 'inner-join', 'left-join'],
+  'Aggregations & Grouping': ['sql', 'group-by', 'having', 'aggregations'],
+  'Ranking & Partitioning': ['sql', 'dense-rank', 'row-number', 'analytics'],
+  'Date & Time Manipulation': ['sql', 'datetime', 'timestamps', 'intervals'],
+  'Subqueries & Correlated': ['sql', 'subqueries', 'exists', 'in-clause'],
+  'Schema & DDL': ['sql', 'ddl', 'constraints', 'indexes'],
+};
+
 // Smart Pattern & Tag Auto-detection based on problem statement keywords
 export function detectTopicAndTags(text = '', domain = 'dsa') {
-  const content = String(text).toLowerCase();
+  const content = String(text || '').toLowerCase();
+  if (!content || content.length < 3) {
+    return { topic: null, tags: [] };
+  }
 
   if (domain === 'sql') {
     if (
       content.includes('over (') ||
       content.includes('partition by') ||
-      content.includes('rank()') ||
-      content.includes('dense_rank') ||
       content.includes('lead(') ||
       content.includes('lag(') ||
       content.includes('window')
     ) {
-      return { topic: 'Window Functions', tags: ['sql', 'window-functions', 'analytics'] };
+      return { topic: 'Window Functions', tags: TOPIC_DEFAULT_TAGS['Window Functions'] };
     }
     if (content.includes('with recursive') || content.includes('cte') || content.includes('with ') || content.includes('common table expression')) {
-      return { topic: 'CTEs & Recursive Queries', tags: ['sql', 'cte', 'recursion'] };
+      return { topic: 'CTEs & Recursive Queries', tags: TOPIC_DEFAULT_TAGS['CTEs & Recursive Queries'] };
     }
     if (content.includes('join') || content.includes('inner join') || content.includes('left join') || content.includes('cross join') || content.includes('foreign key')) {
-      return { topic: 'Multi-Table Joins', tags: ['sql', 'joins', 'relational'] };
+      return { topic: 'Multi-Table Joins', tags: TOPIC_DEFAULT_TAGS['Multi-Table Joins'] };
     }
     if (content.includes('group by') || content.includes('having') || content.includes('count(') || content.includes('sum(') || content.includes('avg(') || content.includes('aggregate')) {
-      return { topic: 'Aggregations & Grouping', tags: ['sql', 'aggregation', 'group-by'] };
+      return { topic: 'Aggregations & Grouping', tags: TOPIC_DEFAULT_TAGS['Aggregations & Grouping'] };
     }
-    if (content.includes('row_number') || content.includes('ntile') || content.includes('ranking') || content.includes('top nth')) {
-      return { topic: 'Ranking & Partitioning', tags: ['sql', 'ranking', 'partition'] };
+    if (content.includes('dense_rank') || content.includes('row_number') || content.includes('ntile') || content.includes('rank()') || content.includes('top nth')) {
+      return { topic: 'Ranking & Partitioning', tags: TOPIC_DEFAULT_TAGS['Ranking & Partitioning'] };
     }
     if (content.includes('date') || content.includes('interval') || content.includes('timestamp') || content.includes('datediff') || content.includes('now()')) {
-      return { topic: 'Date & Time Manipulation', tags: ['sql', 'datetime'] };
+      return { topic: 'Date & Time Manipulation', tags: TOPIC_DEFAULT_TAGS['Date & Time Manipulation'] };
     }
-    return { topic: 'Window Functions', tags: ['sql', 'database'] };
+    if (content.includes('exists') || content.includes('correlated') || content.includes('subquery') || content.includes('where in')) {
+      return { topic: 'Subqueries & Correlated', tags: TOPIC_DEFAULT_TAGS['Subqueries & Correlated'] };
+    }
+    return { topic: null, tags: [] };
   }
 
-  // DSA Detection
-  if (
-    content.includes('two pointer') ||
-    content.includes('2 pointer') ||
-    content.includes('left and right pointer') ||
-    (content.includes('sorted') && (content.includes('pair') || content.includes('triplet') || content.includes('palindrome') || content.includes('container with most water') || content.includes('3sum') || content.includes('two sum ii')))
-  ) {
-    return { topic: 'Two Pointers', tags: ['two-pointers', 'array', 'interview'] };
-  }
-  if (
-    content.includes('sliding window') ||
-    content.includes('window') ||
-    (content.includes('subarray') && (content.includes('contiguous') || content.includes('longest substring') || content.includes('at most k') || content.includes('window size')))
-  ) {
-    return { topic: 'Sliding Window', tags: ['sliding-window', 'array', 'string'] };
-  }
-  if (
-    content.includes('monotonic stack') ||
-    content.includes('next greater') ||
-    content.includes('previous smaller') ||
-    content.includes('histogram') ||
-    content.includes('daily temperatures') ||
-    content.includes('bracket') ||
-    content.includes('parentheses') ||
-    content.includes('stack')
-  ) {
-    return { topic: 'Stack & Monotonic Stack', tags: ['stack', 'monotonic-stack', 'array'] };
-  }
-  if (
-    content.includes('binary search') ||
-    content.includes('bisect') ||
-    content.includes('search in rotated') ||
-    content.includes('search insert') ||
-    (content.includes('sorted') && (content.includes('target') || content.includes('median of two sorted')))
-  ) {
-    return { topic: 'Binary Search', tags: ['binary-search', 'array', 'divide-and-conquer'] };
-  }
-  if (
-    content.includes('dynamic programming') ||
-    content.includes('knapsack') ||
-    content.includes('subsequence') ||
-    content.includes('memoization') ||
-    content.includes('dp[') ||
-    content.includes('min cost') ||
-    content.includes('max profit') ||
-    content.includes('climbing stairs') ||
-    content.includes('coin change') ||
-    content.includes('edit distance')
-  ) {
-    return { topic: 'Dynamic Programming', tags: ['dynamic-programming', 'memoization', 'algorithms'] };
-  }
-  if (
-    content.includes('priority queue') ||
-    content.includes('min heap') ||
-    content.includes('max heap') ||
-    content.includes('heap') ||
-    content.includes('top k') ||
-    content.includes('kth largest') ||
-    content.includes('kth smallest') ||
-    content.includes('median from data stream')
-  ) {
-    return { topic: 'Heap & Priority Queue', tags: ['heap', 'priority-queue', 'sorting'] };
-  }
+  // DSA Topic Detection
   if (
     content.includes('linked list') ||
     content.includes('listnode') ||
-    content.includes('reverse linked list') ||
-    content.includes('detect cycle') ||
-    content.includes('fast and slow') ||
-    content.includes('merge two sorted lists')
+    content.includes('reverse list') ||
+    content.includes('cycle in list') ||
+    content.includes('merge two sorted lists') ||
+    content.includes('reorder list')
   ) {
-    return { topic: 'Linked List', tags: ['linked-list', 'pointers'] };
+    return { topic: 'Linked List', tags: TOPIC_DEFAULT_TAGS['Linked List'] };
   }
+
   if (
     content.includes('binary tree') ||
     content.includes('treenode') ||
@@ -197,44 +168,175 @@ export function detectTopicAndTags(text = '', domain = 'dsa') {
     content.includes('inorder') ||
     content.includes('level order') ||
     content.includes('lowest common ancestor') ||
-    content.includes('maximum depth') ||
-    content.includes('invert binary tree')
+    content.includes('invert tree') ||
+    content.includes('max depth of binary tree') ||
+    content.includes('diameter of tree')
   ) {
-    return { topic: 'Trees & BST', tags: ['tree', 'binary-tree', 'dfs'] };
+    return { topic: 'Trees & BST', tags: TOPIC_DEFAULT_TAGS['Trees & BST'] };
   }
+
+  if (
+    content.includes('dynamic programming') ||
+    content.includes('knapsack') ||
+    content.includes('longest common subsequence') ||
+    content.includes('longest increasing subsequence') ||
+    content.includes('climbing stairs') ||
+    content.includes('coin change') ||
+    content.includes('edit distance') ||
+    content.includes('house robber') ||
+    content.includes('word break') ||
+    content.includes('unique paths') ||
+    content.includes('memoization') ||
+    content.includes('dp[')
+  ) {
+    return { topic: 'Dynamic Programming', tags: TOPIC_DEFAULT_TAGS['Dynamic Programming'] };
+  }
+
   if (
     content.includes('graph') ||
-    content.includes('bfs') ||
-    content.includes('dfs') ||
     content.includes('shortest path') ||
     content.includes('dijkstra') ||
     content.includes('number of islands') ||
     content.includes('topological sort') ||
-    content.includes('connected components')
+    content.includes('connected components') ||
+    content.includes('course schedule') ||
+    content.includes('clone graph') ||
+    content.includes('pacific atlantic') ||
+    content.includes('word ladder')
   ) {
-    return { topic: 'Graphs (BFS/DFS)', tags: ['graph', 'bfs', 'dfs'] };
+    return { topic: 'Graphs (BFS/DFS)', tags: TOPIC_DEFAULT_TAGS['Graphs (BFS/DFS)'] };
   }
+
   if (
     content.includes('backtrack') ||
     content.includes('permutation') ||
     content.includes('subsets') ||
     content.includes('combination sum') ||
     content.includes('n-queens') ||
-    content.includes('word search')
+    content.includes('sudoku solver') ||
+    content.includes('generate parentheses')
   ) {
-    return { topic: 'Backtracking', tags: ['backtracking', 'recursion'] };
-  }
-  if (content.includes('trie') || content.includes('prefix tree') || content.includes('autocomplete')) {
-    return { topic: 'Tries', tags: ['trie', 'string', 'tree'] };
-  }
-  if (content.includes('bit manipulation') || content.includes('xor') || content.includes('bitwise') || content.includes('single number') || content.includes('number of 1 bits')) {
-    return { topic: 'Bit Manipulation', tags: ['bit-manipulation', 'math'] };
-  }
-  if (content.includes('hash map') || content.includes('hash table') || content.includes('frequency') || content.includes('anagram') || content.includes('two sum') || content.includes('contains duplicate')) {
-    return { topic: 'Arrays & Hashing', tags: ['hash-table', 'array', 'string'] };
+    return { topic: 'Backtracking', tags: TOPIC_DEFAULT_TAGS['Backtracking'] };
   }
 
-  return { topic: 'Arrays & Hashing', tags: ['array', 'dsa'] };
+  if (
+    content.includes('priority queue') ||
+    content.includes('min heap') ||
+    content.includes('max heap') ||
+    content.includes('top k') ||
+    content.includes('kth largest') ||
+    content.includes('kth smallest') ||
+    content.includes('median from data stream') ||
+    content.includes('k closest') ||
+    content.includes('heapq')
+  ) {
+    return { topic: 'Heap & Priority Queue', tags: TOPIC_DEFAULT_TAGS['Heap & Priority Queue'] };
+  }
+
+  if (
+    content.includes('sliding window') ||
+    content.includes('longest substring without repeating') ||
+    content.includes('minimum window substring') ||
+    content.includes('sliding window maximum') ||
+    (content.includes('subarray') && (content.includes('contiguous') || content.includes('at most k') || content.includes('window size')))
+  ) {
+    return { topic: 'Sliding Window', tags: TOPIC_DEFAULT_TAGS['Sliding Window'] };
+  }
+
+  if (
+    content.includes('monotonic stack') ||
+    content.includes('next greater') ||
+    content.includes('previous smaller') ||
+    content.includes('largest rectangle in histogram') ||
+    content.includes('daily temperatures') ||
+    content.includes('valid parentheses') ||
+    content.includes('min stack')
+  ) {
+    return { topic: 'Stack & Monotonic Stack', tags: TOPIC_DEFAULT_TAGS['Stack & Monotonic Stack'] };
+  }
+
+  if (
+    content.includes('binary search') ||
+    content.includes('bisect') ||
+    content.includes('search in rotated') ||
+    content.includes('search insert position') ||
+    content.includes('find minimum in rotated') ||
+    content.includes('koko eating bananas') ||
+    content.includes('capacity to ship packages') ||
+    content.includes('median of two sorted arrays')
+  ) {
+    return { topic: 'Binary Search', tags: TOPIC_DEFAULT_TAGS['Binary Search'] };
+  }
+
+  if (
+    content.includes('two pointer') ||
+    content.includes('2 pointer') ||
+    content.includes('container with most water') ||
+    content.includes('3sum') ||
+    content.includes('two sum ii') ||
+    content.includes('valid palindrome') ||
+    content.includes('trapping rain water')
+  ) {
+    return { topic: 'Two Pointers', tags: TOPIC_DEFAULT_TAGS['Two Pointers'] };
+  }
+
+  if (
+    content.includes('intervals') ||
+    content.includes('merge intervals') ||
+    content.includes('insert interval') ||
+    content.includes('non-overlapping intervals') ||
+    content.includes('meeting rooms')
+  ) {
+    return { topic: 'Intervals', tags: TOPIC_DEFAULT_TAGS['Intervals'] };
+  }
+
+  if (
+    content.includes('trie') ||
+    content.includes('prefix tree') ||
+    content.includes('word search ii') ||
+    content.includes('autocomplete')
+  ) {
+    return { topic: 'Tries', tags: TOPIC_DEFAULT_TAGS['Tries'] };
+  }
+
+  if (
+    content.includes('bit manipulation') ||
+    content.includes('bitwise') ||
+    content.includes('single number') ||
+    content.includes('number of 1 bits') ||
+    content.includes('counting bits') ||
+    content.includes('reverse bits') ||
+    content.includes('xor')
+  ) {
+    return { topic: 'Bit Manipulation', tags: TOPIC_DEFAULT_TAGS['Bit Manipulation'] };
+  }
+
+  if (
+    content.includes('greedy') ||
+    content.includes('jump game') ||
+    content.includes('gas station') ||
+    content.includes('candy') ||
+    content.includes('task scheduler')
+  ) {
+    return { topic: 'Greedy', tags: TOPIC_DEFAULT_TAGS['Greedy'] };
+  }
+
+  if (
+    content.includes('two sum') ||
+    content.includes('contains duplicate') ||
+    content.includes('valid anagram') ||
+    content.includes('group anagrams') ||
+    content.includes('top k frequent') ||
+    content.includes('product of array except self') ||
+    content.includes('longest consecutive sequence') ||
+    content.includes('hash map') ||
+    content.includes('hash table') ||
+    content.includes('hash set')
+  ) {
+    return { topic: 'Arrays & Hashing', tags: TOPIC_DEFAULT_TAGS['Arrays & Hashing'] };
+  }
+
+  return { topic: null, tags: [] };
 }
 
 // Progressive 3-Tier Hint Generator based on algorithmic patterns

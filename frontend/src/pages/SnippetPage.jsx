@@ -21,9 +21,11 @@ import {
   STARTER_BOILERPLATES,
   TIME_COMPLEXITY_OPTIONS,
   SPACE_COMPLEXITY_OPTIONS,
+  TOPIC_DEFAULT_TAGS,
   detectTopicAndTags,
   generateTopicHints,
 } from '../utils/languages.js';
+import { detectStaticSyntaxErrors } from '../utils/syntaxValidator.js';
 
 function extractErrorLines(errors = []) {
   if (!Array.isArray(errors) || errors.length === 0) return [];
@@ -74,11 +76,12 @@ export default function SnippetPage() {
   const [saveCommitMessage, setSaveCommitMessage] = useState('');
   const [savingVersion, setSavingVersion] = useState(false);
 
-  // Edit Problem Details Modal (Title, Difficulty, Topic, Problem Statement)
+  // Edit Problem Details Modal (Title, Difficulty, Topic, Problem Statement, Tags)
   const [showEditDetailsModal, setShowEditDetailsModal] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDifficulty, setEditDifficulty] = useState('Medium');
   const [editTopic, setEditTopic] = useState('General');
+  const [editTags, setEditTags] = useState('');
   const [editLanguage, setEditLanguage] = useState('python');
   const [editProblemStatement, setEditProblemStatement] = useState('');
   const [editTargetTime, setEditTargetTime] = useState('');
@@ -136,18 +139,33 @@ export default function SnippetPage() {
   const canAnalyze = useMemo(() => Boolean(user), [user]);
   const isSql = useMemo(() => snippet?.domain === 'sql' || snippet?.language === 'sql', [snippet]);
 
-  const errorLines = useMemo(() => {
-    if (Array.isArray(analysis?.errorLines) && analysis.errorLines.length > 0) {
-      return analysis.errorLines;
-    }
-    return extractErrorLines(analysis?.issues || analysis?.errors || analysis?.analysisErrors);
-  }, [analysis?.errorLines, analysis?.issues, analysis?.errors, analysis?.analysisErrors]);
+  const localSyntaxIssues = useMemo(() => {
+    return detectStaticSyntaxErrors(currentCode, snippet?.language || 'python');
+  }, [currentCode, snippet?.language]);
 
-  const hasErrors =
-    Boolean(analysis?.hasSyntaxErrors) ||
-    (analysis?.issues?.length > 0) ||
-    (analysis?.errors?.length > 0) ||
-    (analysis?.analysisErrors?.length > 0);
+  const allSyntaxIssues = useMemo(() => {
+    const combined = new Map();
+    localSyntaxIssues.forEach((iss) => {
+      combined.set(`${iss.line}-${iss.title}`, iss);
+    });
+    if (Array.isArray(analysis?.issues)) {
+      analysis.issues.forEach((iss) => {
+        combined.set(`${iss.line}-${iss.title}`, iss);
+      });
+    }
+    return Array.from(combined.values());
+  }, [localSyntaxIssues, analysis?.issues]);
+
+  const errorLines = useMemo(() => {
+    const lineNumbers = new Set();
+    allSyntaxIssues.forEach((iss) => {
+      const num = Number(iss?.line);
+      if (Number.isFinite(num) && num > 0) lineNumbers.add(num);
+    });
+    return Array.from(lineNumbers).sort((a, b) => a - b);
+  }, [allSyntaxIssues]);
+
+  const hasErrors = allSyntaxIssues.length > 0;
 
   const effectiveHints = useMemo(() => {
     if (Array.isArray(analysis?.hints) && analysis.hints.length > 0) {
@@ -173,10 +191,11 @@ export default function SnippetPage() {
       setEditTitle(res.data.snippet.title || '');
       setEditDifficulty(res.data.snippet.difficulty || 'Medium');
       setEditTopic(res.data.snippet.topic || 'General');
+      setEditTags((res.data.snippet.tags || []).join(', '));
       setEditLanguage(res.data.snippet.language || 'python');
-      setEditProblemStatement(res.data.snippet.problemStatement || '');
-      setEditTargetTime(res.data.snippet.targetTimeComplexity || '');
-      setEditTargetSpace(res.data.snippet.targetSpaceComplexity || '');
+      setEditProblemStatement(res.data.snippet.problemStatement || res.data.snippet.description || '');
+      setEditTargetTime(res.data.snippet.targetTimeComplexity || 'O(n)');
+      setEditTargetSpace(res.data.snippet.targetSpaceComplexity || 'O(1)');
       setEditSqlSchema(res.data.snippet.sqlSchema || DEFAULT_MOCK_SQL_SCHEMA);
     } catch (_err) {
       setError('Problem not found or failed to load.');
@@ -322,6 +341,12 @@ export default function SnippetPage() {
         title: editTitle.trim(),
         difficulty: editDifficulty,
         topic: editTopic.trim(),
+        tags: editTags
+          ? editTags
+              .split(',')
+              .map((t) => t.trim().toLowerCase())
+              .filter(Boolean)
+          : undefined,
         language: editLanguage.trim().toLowerCase(),
         problemStatement: editProblemStatement.trim(),
         targetTimeComplexity: editTargetTime.trim(),
@@ -770,9 +795,13 @@ export default function SnippetPage() {
               }`}
             >
               <span>Editorial & Review</span>
-              {analysis ? (
+              {hasErrors ? (
+                <span className="rounded-full bg-rose-100 dark:bg-rose-900/60 px-1.5 text-[10px] text-rose-700 dark:text-rose-300 font-bold">
+                  {allSyntaxIssues.length} {allSyntaxIssues.length === 1 ? 'Error' : 'Errors'}
+                </span>
+              ) : analysis ? (
                 <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/60 px-1.5 text-[10px] text-emerald-700 dark:text-emerald-300 font-bold">
-                  {analysis.overallScore}/10
+                  {analysis.isSolved || analysis.targetComplexityMet ? 'Optimal' : 'Reviewed'}
                 </span>
               ) : null}
             </button>
@@ -979,9 +1008,9 @@ export default function SnippetPage() {
                         <h4 className="font-bold text-slate-900 dark:text-white uppercase tracking-wider text-[11px]">
                           Syntax & Compilation Check
                         </h4>
-                        {analysis.hasSyntaxErrors ? (
+                        {hasErrors ? (
                           <span className="rounded bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold">
-                            Errors Detected ({analysis.issues?.length || 1})
+                            {allSyntaxIssues.length} {allSyntaxIssues.length === 1 ? 'Error' : 'Errors'} Detected
                           </span>
                         ) : (
                           <span className="rounded bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold">
@@ -990,9 +1019,9 @@ export default function SnippetPage() {
                         )}
                       </div>
 
-                      {analysis.issues?.length > 0 && (
+                      {allSyntaxIssues.length > 0 && (
                         <div className="space-y-2 pt-2">
-                          {analysis.issues.map((iss, i) => (
+                          {allSyntaxIssues.map((iss, i) => (
                             <div
                               key={`iss-${i}`}
                               className="rounded border border-rose-200 dark:border-rose-900/60 bg-rose-50/60 dark:bg-rose-950/30 p-3 space-y-1"
@@ -1297,7 +1326,16 @@ export default function SnippetPage() {
                   <input
                     type="text"
                     value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
+                    onChange={(e) => {
+                      const newTitle = e.target.value;
+                      setEditTitle(newTitle);
+                      const combined = `${newTitle} ${editProblemStatement}`;
+                      const { topic: detectedTopic, tags: detectedTags } = detectTopicAndTags(combined, snippet.domain);
+                      if (detectedTopic) {
+                        setEditTopic(detectedTopic);
+                        if (detectedTags?.length > 0) setEditTags(detectedTags.join(', '));
+                      }
+                    }}
                     className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
                   />
                 </div>
@@ -1321,7 +1359,14 @@ export default function SnippetPage() {
                     <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Topic / Pattern</label>
                     <select
                       value={editTopic}
-                      onChange={(e) => setEditTopic(e.target.value)}
+                      onChange={(e) => {
+                        const newTopic = e.target.value;
+                        setEditTopic(newTopic);
+                        const defaultTags = TOPIC_DEFAULT_TAGS[newTopic] || [];
+                        if (defaultTags.length > 0) {
+                          setEditTags(defaultTags.join(', '));
+                        }
+                      }}
                       className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100"
                     >
                       {(isSql ? SQL_TOPICS : DSA_TOPICS).map((t) => (
@@ -1331,6 +1376,19 @@ export default function SnippetPage() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                <div>
+                  <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">
+                    Tags (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={editTags}
+                    onChange={(e) => setEditTags(e.target.value)}
+                    placeholder="e.g. two-pointers, array, sorted-array"
+                    className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                  />
                 </div>
 
                 {!isSql && (
@@ -1372,10 +1430,13 @@ export default function SnippetPage() {
                     rows={4}
                     value={editProblemStatement}
                     onChange={(e) => {
-                      setEditProblemStatement(e.target.value);
-                      const { topic: detectedTopic } = detectTopicAndTags(e.target.value, snippet.domain);
+                      const newDesc = e.target.value;
+                      setEditProblemStatement(newDesc);
+                      const combined = `${editTitle} ${newDesc}`;
+                      const { topic: detectedTopic, tags: detectedTags } = detectTopicAndTags(combined, snippet.domain);
                       if (detectedTopic) {
                         setEditTopic(detectedTopic);
+                        if (detectedTags?.length > 0) setEditTags(detectedTags.join(', '));
                       }
                     }}
                     placeholder="Enter problem description, constraints, and examples..."
