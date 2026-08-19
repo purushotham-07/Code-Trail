@@ -196,7 +196,7 @@ export const editSnippet = async (req, res) => {
     await snippet.save();
 
     const isSnapshot = nextVersion % SNAPSHOT_EVERY === 0;
-    await createVersionRecord({
+    const newVersion = await createVersionRecord({
       snippetId: snippet._id,
       versionNumber: nextVersion,
       fullCode: code,
@@ -206,7 +206,20 @@ export const editSnippet = async (req, res) => {
       author: req.user.id,
     });
 
-    return res.json({ snippet });
+    const [populatedSnippet, updatedVersions] = await Promise.all([
+      Snippet.findById(snippet._id).populate('owner', 'name avatar'),
+      Version.find({ snippetId: snippet._id })
+        .sort({ versionNumber: 1 })
+        .populate('author', 'name avatar')
+        .select('versionNumber snapshot commitMessage author createdAt id fullCode diff'),
+    ]);
+
+    return res.json({
+      success: true,
+      snippet: populatedSnippet,
+      version: newVersion,
+      versions: updatedVersions,
+    });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }

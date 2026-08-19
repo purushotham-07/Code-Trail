@@ -15,6 +15,9 @@ import {
   SQL_DIALECTS,
   STARTER_BOILERPLATES,
   DEFAULT_MOCK_SQL_SCHEMA,
+  TIME_COMPLEXITY_OPTIONS,
+  SPACE_COMPLEXITY_OPTIONS,
+  detectTopicAndTags,
 } from '../utils/languages.js';
 
 const CodeEditor = lazy(() => import('../components/CodeEditor.jsx'));
@@ -31,6 +34,7 @@ export default function CreatePage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [showToolkit, setShowToolkit] = useState(false);
+  const [autoDetectedBadge, setAutoDetectedBadge] = useState('');
 
   const {
     register,
@@ -46,7 +50,7 @@ export default function CreatePage() {
       language: initialDomain === 'sql' ? 'sql' : 'python',
       difficulty: 'Medium',
       topic: initialDomain === 'sql' ? 'Window Functions' : 'Two Pointers',
-      tags: '',
+      tags: 'two-pointers, array',
       isPublic: true,
       commitMessage: 'Initial version',
       problemStatement: '',
@@ -57,19 +61,34 @@ export default function CreatePage() {
   });
 
   const selectedLanguage = watch('language');
+  const watchedTopic = watch('topic');
+
+  // Auto-detect topic & tags when problem description or title changes
+  const handleAutoDetection = (text) => {
+    if (!text || text.length < 5) return;
+    const { topic: detectedTopic, tags: detectedTags } = detectTopicAndTags(text, domain);
+    if (detectedTopic) {
+      setValue('topic', detectedTopic);
+      setValue('tags', detectedTags.join(', '));
+      setAutoDetectedBadge(detectedTopic);
+    }
+  };
 
   const handleDomainSwitch = (newDomain) => {
     setDomain(newDomain);
     setValue('domain', newDomain);
+    setAutoDetectedBadge('');
     if (newDomain === 'sql') {
       setValue('language', 'sql');
       setValue('topic', 'Window Functions');
+      setValue('tags', 'sql, window-functions');
       setValue('targetTimeComplexity', 'O(n log n)');
       setValue('targetSpaceComplexity', 'O(n)');
       setCode(STARTER_BOILERPLATES.sql);
     } else {
       setValue('language', 'python');
       setValue('topic', 'Two Pointers');
+      setValue('tags', 'two-pointers, array');
       setValue('targetTimeComplexity', 'O(n)');
       setValue('targetSpaceComplexity', 'O(1)');
       setCode(STARTER_BOILERPLATES.python);
@@ -113,7 +132,7 @@ export default function CreatePage() {
     }
 
     try {
-      await api.post('/snippets', {
+      const res = await api.post('/snippets', {
         title: String(data.title || '').trim(),
         description: String(data.description || '').trim(),
         domain,
@@ -128,12 +147,12 @@ export default function CreatePage() {
         isPublic: data.isPublic === 'true' || data.isPublic === true,
         commitMessage: String(data.commitMessage || 'Initial version').trim(),
         problemStatement: String(data.problemStatement || '').trim(),
-        targetTimeComplexity: domain === 'dsa' ? String(data.targetTimeComplexity || '').trim() : '',
-        targetSpaceComplexity: domain === 'dsa' ? String(data.targetSpaceComplexity || '').trim() : '',
+        targetTimeComplexity: domain === 'dsa' ? String(data.targetTimeComplexity || 'O(n)').trim() : '',
+        targetSpaceComplexity: domain === 'dsa' ? String(data.targetSpaceComplexity || 'O(1)').trim() : '',
         sqlSchema: domain === 'sql' ? String(sqlSchema || '').trim() : '',
         sqlDialect: domain === 'sql' ? data.sqlDialect : 'standard',
       });
-      navigate('/');
+      navigate(`/snippet/${res.data.snippet._id}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to create problem entry.');
     } finally {
@@ -149,7 +168,7 @@ export default function CreatePage() {
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Create Problem / Solution</h1>
             <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-              Publish a DSA problem or SQL query with version tracking and AI analysis.
+              Publish a DSA problem or SQL query with automatic pattern detection and version tracking.
             </p>
           </div>
 
@@ -190,6 +209,9 @@ export default function CreatePage() {
                     required: 'Title is required',
                     maxLength: { value: 200, message: 'Title must be under 200 characters' },
                   })}
+                  onChange={(e) => {
+                    handleAutoDetection(e.target.value);
+                  }}
                   placeholder={domain === 'dsa' ? 'e.g. Trapping Rain Water' : 'e.g. Department Top Three Salaries'}
                   className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
                 />
@@ -254,9 +276,16 @@ export default function CreatePage() {
               )}
 
               <div>
-                <label htmlFor="topic" className="mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
-                  {domain === 'dsa' ? 'Pattern / Topic' : 'SQL Topic'}
-                </label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label htmlFor="topic" className="block text-xs font-semibold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                    {domain === 'dsa' ? 'Pattern / Topic' : 'SQL Topic'}
+                  </label>
+                  {autoDetectedBadge && (
+                    <span className="rounded bg-blue-50 dark:bg-blue-900/40 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700">
+                      Auto-detected: {autoDetectedBadge}
+                    </span>
+                  )}
+                </div>
                 <select
                   id="topic"
                   {...register('topic')}
@@ -271,30 +300,40 @@ export default function CreatePage() {
               </div>
             </div>
 
-            {/* Target Complexity (for DSA) */}
+            {/* Target Complexity Selection Dropdowns (for DSA) */}
             {domain === 'dsa' && (
               <div className="grid gap-4 md:grid-cols-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950/60 p-3.5">
                 <div>
                   <label htmlFor="targetTimeComplexity" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
                     Target Time Complexity
                   </label>
-                  <input
+                  <select
                     id="targetTimeComplexity"
                     {...register('targetTimeComplexity')}
-                    placeholder="e.g. O(n), O(n log n), O(1)"
-                    className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 font-mono text-xs text-blue-700 dark:text-blue-300 focus:border-blue-500 focus:outline-none"
-                  />
+                    className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 font-mono text-xs text-blue-700 dark:text-blue-300 focus:border-blue-500 focus:outline-none"
+                  >
+                    {TIME_COMPLEXITY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label htmlFor="targetSpaceComplexity" className="mb-1 block text-xs font-medium text-slate-700 dark:text-slate-300">
                     Target Space Complexity
                   </label>
-                  <input
+                  <select
                     id="targetSpaceComplexity"
                     {...register('targetSpaceComplexity')}
-                    placeholder="e.g. O(1), O(n)"
-                    className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-1.5 font-mono text-xs text-indigo-700 dark:text-indigo-300 focus:border-blue-500 focus:outline-none"
-                  />
+                    className="w-full rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 font-mono text-xs text-indigo-700 dark:text-indigo-300 focus:border-blue-500 focus:outline-none"
+                  >
+                    {SPACE_COMPLEXITY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             )}
@@ -307,10 +346,13 @@ export default function CreatePage() {
               <textarea
                 id="problemStatement"
                 {...register('problemStatement')}
+                onChange={(e) => {
+                  handleAutoDetection(e.target.value);
+                }}
                 rows={4}
                 placeholder={
                   domain === 'dsa'
-                    ? "Problem description, example inputs/outputs, and numerical constraints..."
+                    ? "Problem description, example inputs/outputs, and numerical constraints (e.g. Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target)..."
                     : "SQL query objective, schema context, or expected column output..."
                 }
                 className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 p-3 font-mono text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
@@ -346,12 +388,12 @@ export default function CreatePage() {
             <div className="grid gap-4 md:grid-cols-2">
               <div>
                 <label htmlFor="tags" className="mb-1.5 block text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Tags (comma-separated)
+                  Tags (Auto-generated or custom comma-separated)
                 </label>
                 <input
                   id="tags"
                   {...register('tags')}
-                  placeholder="leetcode, binary-search, array"
+                  placeholder="two-pointers, array, interview"
                   className="w-full rounded-md border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-2 text-xs text-slate-900 dark:text-slate-200 placeholder-slate-400 dark:placeholder-slate-500 focus:border-blue-500 focus:outline-none"
                 />
               </div>
@@ -440,9 +482,16 @@ export default function CreatePage() {
               whileTap={{ scale: 0.97 }}
               type="submit"
               disabled={submitting}
-              className="rounded-md bg-blue-600 px-6 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-blue-600 px-6 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 flex items-center gap-1.5"
             >
-              {submitting ? 'Publishing…' : 'Publish Problem'}
+              {submitting ? (
+                <>
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span>Publishing…</span>
+                </>
+              ) : (
+                <span>Publish Problem</span>
+              )}
             </motion.button>
           </div>
         </form>

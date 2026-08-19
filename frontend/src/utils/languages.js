@@ -61,6 +61,182 @@ export const SQL_DIALECTS = [
   { id: 'sqlite', label: 'SQLite' },
 ];
 
+// Predefined Target Complexity Lists for Dropdown Selection
+export const TIME_COMPLEXITY_OPTIONS = [
+  { value: 'O(1)', label: 'O(1) - Constant' },
+  { value: 'O(log n)', label: 'O(log n) - Logarithmic' },
+  { value: 'O(n)', label: 'O(n) - Linear' },
+  { value: 'O(n log n)', label: 'O(n log n) - Linearithmic' },
+  { value: 'O(n^2)', label: 'O(n²) - Quadratic' },
+  { value: 'O(n^3)', label: 'O(n³) - Cubic' },
+  { value: 'O(2^n)', label: 'O(2ⁿ) - Exponential' },
+  { value: 'O(n!)', label: 'O(n!) - Factorial' },
+];
+
+export const SPACE_COMPLEXITY_OPTIONS = [
+  { value: 'O(1)', label: 'O(1) - Constant Auxiliary Space' },
+  { value: 'O(log n)', label: 'O(log n) - Logarithmic Space' },
+  { value: 'O(n)', label: 'O(n) - Linear Auxiliary Space' },
+  { value: 'O(n log n)', label: 'O(n log n)' },
+  { value: 'O(n^2)', label: 'O(n²) - 2D Matrix / Grid' },
+  { value: 'O(n * m)', label: 'O(n * m) - 2D DP Grid' },
+  { value: 'O(k)', label: 'O(k) - Window / Top K Elements' },
+];
+
+// Smart Pattern & Tag Auto-detection based on problem statement keywords
+export function detectTopicAndTags(text = '', domain = 'dsa') {
+  const content = String(text).toLowerCase();
+
+  if (domain === 'sql') {
+    if (
+      content.includes('over (') ||
+      content.includes('partition by') ||
+      content.includes('rank()') ||
+      content.includes('dense_rank') ||
+      content.includes('lead(') ||
+      content.includes('lag(') ||
+      content.includes('window')
+    ) {
+      return { topic: 'Window Functions', tags: ['sql', 'window-functions', 'analytics'] };
+    }
+    if (content.includes('with recursive') || content.includes('cte') || content.includes('with ') || content.includes('common table expression')) {
+      return { topic: 'CTEs & Recursive Queries', tags: ['sql', 'cte', 'recursion'] };
+    }
+    if (content.includes('join') || content.includes('inner join') || content.includes('left join') || content.includes('cross join') || content.includes('foreign key')) {
+      return { topic: 'Multi-Table Joins', tags: ['sql', 'joins', 'relational'] };
+    }
+    if (content.includes('group by') || content.includes('having') || content.includes('count(') || content.includes('sum(') || content.includes('avg(') || content.includes('aggregate')) {
+      return { topic: 'Aggregations & Grouping', tags: ['sql', 'aggregation', 'group-by'] };
+    }
+    if (content.includes('row_number') || content.includes('ntile') || content.includes('ranking') || content.includes('top nth')) {
+      return { topic: 'Ranking & Partitioning', tags: ['sql', 'ranking', 'partition'] };
+    }
+    if (content.includes('date') || content.includes('interval') || content.includes('timestamp') || content.includes('datediff') || content.includes('now()')) {
+      return { topic: 'Date & Time Manipulation', tags: ['sql', 'datetime'] };
+    }
+    return { topic: 'Window Functions', tags: ['sql', 'database'] };
+  }
+
+  // DSA Detection
+  if (
+    content.includes('two pointer') ||
+    content.includes('2 pointer') ||
+    content.includes('left and right pointer') ||
+    (content.includes('sorted') && (content.includes('pair') || content.includes('triplet') || content.includes('palindrome') || content.includes('container with most water') || content.includes('3sum') || content.includes('two sum ii')))
+  ) {
+    return { topic: 'Two Pointers', tags: ['two-pointers', 'array', 'interview'] };
+  }
+  if (
+    content.includes('sliding window') ||
+    content.includes('window') ||
+    (content.includes('subarray') && (content.includes('contiguous') || content.includes('longest substring') || content.includes('at most k') || content.includes('window size')))
+  ) {
+    return { topic: 'Sliding Window', tags: ['sliding-window', 'array', 'string'] };
+  }
+  if (
+    content.includes('monotonic stack') ||
+    content.includes('next greater') ||
+    content.includes('previous smaller') ||
+    content.includes('histogram') ||
+    content.includes('daily temperatures') ||
+    content.includes('bracket') ||
+    content.includes('parentheses') ||
+    content.includes('stack')
+  ) {
+    return { topic: 'Stack & Monotonic Stack', tags: ['stack', 'monotonic-stack', 'array'] };
+  }
+  if (
+    content.includes('binary search') ||
+    content.includes('bisect') ||
+    content.includes('search in rotated') ||
+    content.includes('search insert') ||
+    (content.includes('sorted') && (content.includes('target') || content.includes('median of two sorted')))
+  ) {
+    return { topic: 'Binary Search', tags: ['binary-search', 'array', 'divide-and-conquer'] };
+  }
+  if (
+    content.includes('dynamic programming') ||
+    content.includes('knapsack') ||
+    content.includes('subsequence') ||
+    content.includes('memoization') ||
+    content.includes('dp[') ||
+    content.includes('min cost') ||
+    content.includes('max profit') ||
+    content.includes('climbing stairs') ||
+    content.includes('coin change') ||
+    content.includes('edit distance')
+  ) {
+    return { topic: 'Dynamic Programming', tags: ['dynamic-programming', 'memoization', 'algorithms'] };
+  }
+  if (
+    content.includes('priority queue') ||
+    content.includes('min heap') ||
+    content.includes('max heap') ||
+    content.includes('heap') ||
+    content.includes('top k') ||
+    content.includes('kth largest') ||
+    content.includes('kth smallest') ||
+    content.includes('median from data stream')
+  ) {
+    return { topic: 'Heap & Priority Queue', tags: ['heap', 'priority-queue', 'sorting'] };
+  }
+  if (
+    content.includes('linked list') ||
+    content.includes('listnode') ||
+    content.includes('reverse linked list') ||
+    content.includes('detect cycle') ||
+    content.includes('fast and slow') ||
+    content.includes('merge two sorted lists')
+  ) {
+    return { topic: 'Linked List', tags: ['linked-list', 'pointers'] };
+  }
+  if (
+    content.includes('binary tree') ||
+    content.includes('treenode') ||
+    content.includes('bst') ||
+    content.includes('inorder') ||
+    content.includes('level order') ||
+    content.includes('lowest common ancestor') ||
+    content.includes('maximum depth') ||
+    content.includes('invert binary tree')
+  ) {
+    return { topic: 'Trees & BST', tags: ['tree', 'binary-tree', 'dfs'] };
+  }
+  if (
+    content.includes('graph') ||
+    content.includes('bfs') ||
+    content.includes('dfs') ||
+    content.includes('shortest path') ||
+    content.includes('dijkstra') ||
+    content.includes('number of islands') ||
+    content.includes('topological sort') ||
+    content.includes('connected components')
+  ) {
+    return { topic: 'Graphs (BFS/DFS)', tags: ['graph', 'bfs', 'dfs'] };
+  }
+  if (
+    content.includes('backtrack') ||
+    content.includes('permutation') ||
+    content.includes('subsets') ||
+    content.includes('combination sum') ||
+    content.includes('n-queens') ||
+    content.includes('word search')
+  ) {
+    return { topic: 'Backtracking', tags: ['backtracking', 'recursion'] };
+  }
+  if (content.includes('trie') || content.includes('prefix tree') || content.includes('autocomplete')) {
+    return { topic: 'Tries', tags: ['trie', 'string', 'tree'] };
+  }
+  if (content.includes('bit manipulation') || content.includes('xor') || content.includes('bitwise') || content.includes('single number') || content.includes('number of 1 bits')) {
+    return { topic: 'Bit Manipulation', tags: ['bit-manipulation', 'math'] };
+  }
+  if (content.includes('hash map') || content.includes('hash table') || content.includes('frequency') || content.includes('anagram') || content.includes('two sum') || content.includes('contains duplicate')) {
+    return { topic: 'Arrays & Hashing', tags: ['hash-table', 'array', 'string'] };
+  }
+
+  return { topic: 'Arrays & Hashing', tags: ['array', 'dsa'] };
+}
+
 // Student mastery cheat sheet for common DSA patterns
 export const DSA_PATTERN_GUIDE = {
   'Two Pointers': {

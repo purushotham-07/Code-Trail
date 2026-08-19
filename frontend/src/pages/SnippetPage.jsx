@@ -20,6 +20,9 @@ import {
   DEFAULT_MOCK_SQL_SCHEMA,
   DSA_PATTERN_GUIDE,
   STARTER_BOILERPLATES,
+  TIME_COMPLEXITY_OPTIONS,
+  SPACE_COMPLEXITY_OPTIONS,
+  detectTopicAndTags,
 } from '../utils/languages.js';
 
 function extractErrorLines(errors = []) {
@@ -254,7 +257,7 @@ export default function SnippetPage() {
       });
   }, [id, selectedVersion, loading]);
 
-  // Handle Save New Version (with double-click protection)
+  // Handle Save New Version (in ONE unified API call)
   const handleSaveVersion = async (e) => {
     if (e) e.preventDefault();
     if (!user) {
@@ -274,7 +277,7 @@ export default function SnippetPage() {
     const note = saveCommitMessage.trim() || `Iteration v${nextVer}`;
 
     try {
-      await api.put(`/snippets/${id}`, {
+      const res = await api.put(`/snippets/${id}`, {
         title: snippet.title,
         description: snippet.description,
         domain: snippet.domain,
@@ -294,7 +297,9 @@ export default function SnippetPage() {
 
       setShowSaveModal(false);
       setSaveCommitMessage('');
-      await Promise.all([loadSnippet(), loadVersions()]);
+      // In 1 single API call: snippet and all updated versions are refreshed!
+      if (res.data.snippet) setSnippet(res.data.snippet);
+      if (res.data.versions) setVersions(res.data.versions);
       setSelectedVersion(nextVer);
       setLeftTab('versions');
     } catch (err) {
@@ -304,14 +309,14 @@ export default function SnippetPage() {
     }
   };
 
-  // Handle Edit Problem Details
+  // Handle Edit Problem Details (in ONE unified API call)
   const handleSaveProblemDetails = async (e) => {
     if (e) e.preventDefault();
     if (!isOwner || savingDetails) return;
 
     setSavingDetails(true);
     try {
-      await api.put(`/snippets/${id}`, {
+      const res = await api.put(`/snippets/${id}`, {
         title: editTitle.trim(),
         difficulty: editDifficulty,
         topic: editTopic.trim(),
@@ -324,7 +329,8 @@ export default function SnippetPage() {
         commitMessage: `Updated problem parameters`,
       });
       setShowEditDetailsModal(false);
-      await Promise.all([loadSnippet(), loadVersions()]);
+      if (res.data.snippet) setSnippet(res.data.snippet);
+      if (res.data.versions) setVersions(res.data.versions);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update problem details.');
     } finally {
@@ -1409,24 +1415,32 @@ export default function SnippetPage() {
                 {!isSql && (
                   <div className="grid gap-3 grid-cols-2">
                     <div>
-                      <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Target Time</label>
-                      <input
-                        type="text"
-                        value={editTargetTime}
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Target Time Complexity</label>
+                      <select
+                        value={editTargetTime || 'O(n)'}
                         onChange={(e) => setEditTargetTime(e.target.value)}
-                        placeholder="e.g. O(N)"
-                        className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs font-mono"
-                      />
+                        className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs font-mono text-blue-700 dark:text-blue-300"
+                      >
+                        {TIME_COMPLEXITY_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                     <div>
-                      <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Target Space</label>
-                      <input
-                        type="text"
-                        value={editTargetSpace}
+                      <label className="mb-1 block font-semibold text-slate-700 dark:text-slate-300">Target Space Complexity</label>
+                      <select
+                        value={editTargetSpace || 'O(1)'}
                         onChange={(e) => setEditTargetSpace(e.target.value)}
-                        placeholder="e.g. O(1)"
-                        className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs font-mono"
-                      />
+                        className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] px-3 py-1.5 text-xs font-mono text-indigo-700 dark:text-indigo-300"
+                      >
+                        {SPACE_COMPLEXITY_OPTIONS.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 )}
@@ -1436,7 +1450,14 @@ export default function SnippetPage() {
                   <textarea
                     rows={4}
                     value={editProblemStatement}
-                    onChange={(e) => setEditProblemStatement(e.target.value)}
+                    onChange={(e) => {
+                      setEditProblemStatement(e.target.value);
+                      const { topic: detectedTopic } = detectTopicAndTags(e.target.value, snippet.domain);
+                      if (detectedTopic) {
+                        setEditTopic(detectedTopic);
+                      }
+                    }}
+                    placeholder="Enter problem description, constraints, and examples..."
                     className="w-full rounded border border-slate-200 dark:border-[#404040] bg-slate-50 dark:bg-[#1a1a1a] p-2.5 text-xs text-slate-900 dark:text-slate-100"
                   />
                 </div>
