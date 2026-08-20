@@ -458,7 +458,8 @@ export default function SnippetPage() {
 
     setCommentSubmitting(true);
     try {
-      const res = await api.post(`/comments/${id}`, { content: commentInput.trim() });
+      const payload = { text: commentInput.trim(), content: commentInput.trim() };
+      const res = await api.post(`/comments/${id}`, payload);
       setComments((prev) => [res.data.comment, ...prev]);
       setCommentInput('');
     } catch (err) {
@@ -1158,31 +1159,39 @@ export default function SnippetPage() {
                 )}
 
                 <div className="space-y-3 divide-y divide-slate-100 dark:divide-[#333333] pt-2">
-                  {comments.map((c) => (
-                    <div key={c._id} className="pt-3 first:pt-0 space-y-1">
-                      <div className="flex items-center justify-between text-slate-500">
-                        <div className="flex items-center gap-2">
-                          {c.author?.avatar && (
-                            <img src={c.author.avatar} alt={c.author.name} className="h-5 w-5 rounded-full object-cover" />
-                          )}
-                          <span className="font-semibold text-slate-800 dark:text-slate-200">{c.author?.name || 'User'}</span>
+                  {comments.map((c) => {
+                    const authorObj = c.author || c.userId || {};
+                    const authorName = authorObj.name || 'User';
+                    const authorAvatar = authorObj.avatar;
+                    const commentText = c.content || c.text || '';
+                    const isAuthor = user && (user.id === authorObj._id || user.id === authorObj || user.id === c.userId?._id);
+
+                    return (
+                      <div key={c._id} className="pt-3 first:pt-0 space-y-1">
+                        <div className="flex items-center justify-between text-slate-500">
+                          <div className="flex items-center gap-2">
+                            {authorAvatar && (
+                              <img src={authorAvatar} alt={authorName} className="h-5 w-5 rounded-full object-cover" />
+                            )}
+                            <span className="font-semibold text-slate-800 dark:text-slate-200">{authorName}</span>
+                          </div>
+                          <span className="text-[10px]">{new Date(c.createdAt).toLocaleDateString()}</span>
                         </div>
-                        <span className="text-[10px]">{new Date(c.createdAt).toLocaleDateString()}</span>
+                        <p className="text-slate-700 dark:text-slate-300 leading-relaxed pl-7">{commentText}</p>
+                        {isAuthor && (
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteComment(c._id)}
+                              className="text-[10px] text-rose-500 hover:underline"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <p className="text-slate-700 dark:text-slate-300 leading-relaxed pl-7">{c.content}</p>
-                      {user && user.id === c.author?._id && (
-                        <div className="flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteComment(c._id)}
-                            className="text-[10px] text-rose-500 hover:underline"
-                          >
-                            Delete
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             )}

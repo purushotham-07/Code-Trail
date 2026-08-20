@@ -26,8 +26,18 @@ export const getComments = async (req, res) => {
       Comment.countDocuments({ snippetId: req.params.snippetId }),
     ]);
 
+    const formattedComments = comments.map((c) => {
+      const doc = c.toObject ? c.toObject() : c;
+      const author = doc.userId || {};
+      return {
+        ...doc,
+        author,
+        content: doc.text || doc.content || '',
+      };
+    });
+
     return res.json({
-      comments,
+      comments: formattedComments,
       pagination: {
         page,
         limit,
@@ -52,7 +62,7 @@ export const addComment = async (req, res) => {
       return res.status(404).json({ message: 'Snippet not found' });
     }
 
-    const text = req.body.text?.trim();
+    const text = (req.body.text || req.body.content || '').trim();
     if (!text) {
       return res.status(400).json({ message: 'Comment text is required' });
     }
@@ -66,8 +76,13 @@ export const addComment = async (req, res) => {
       text,
     });
 
-    const populated = await Comment.findById(comment._id).populate('userId', 'name avatar');
-    return res.status(201).json({ comment: populated });
+    const populated = await Comment.findById(comment._id).populate('userId', 'name avatar').lean();
+    const formatted = {
+      ...populated,
+      author: populated.userId || {},
+      content: populated.text || '',
+    };
+    return res.status(201).json({ comment: formatted });
   } catch (error) {
     return res.status(400).json({ message: error.message });
   }
